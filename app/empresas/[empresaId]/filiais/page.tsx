@@ -59,7 +59,8 @@ export default function FiliaisPage() {
   const params = useParams();
   const router = useRouter(); 
   const empresaId = params.empresaId as string;
-
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true); 
   const [searchTerm, setSearchTerm] = useState("")
@@ -83,30 +84,31 @@ export default function FiliaisPage() {
     },
   })
 
-useEffect(() => {
+  const fetchFiliais = useCallback(async () => {
+      if (!empresaId) return; 
+      setLoading(true);
+      try {
+        const response = await api.get(`/empresas/${empresaId}/filiais/`);
+        setFiliais(response.data);
+      } catch (err) {
+        console.error("Falha ao buscar filiais", err);
+      } finally {
+        setLoading(false);
+      }
+  }, [empresaId]);
+
+  useEffect(() => {
     const token = localStorage.getItem('accessToken');
     if (!token) {
-        router.push('/');
-        return;
+      router.push('/'); 
+      return;
     }
-
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const response = await api.get(`/empresas/${empresaId}/filiais/`);
-            setFiliais(response.data);
-        } catch (err) {
-            console.error("Falha ao buscar filiais", err);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     if (empresaId) {
-        fetchData();
+      fetchFiliais();
     }
-
-}, [empresaId, router]); 
+    
+  }, [empresaId, router, fetchFiliais]);
 
   const filiaisFiltradas = useMemo(() => {
     return filiais.filter((filial) => {
@@ -147,23 +149,48 @@ useEffect(() => {
 
 const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
 
     const payload = { ...formData };
-    if (!payload.senha) {
+    if (payload.endereco?.cep) {
+        payload.endereco.cep = payload.endereco.cep.replace(/\D/g, '');
+    }
+    if (editingItem && !payload.senha) {
         delete payload.senha;
     }
 
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
     try {
+        let response;
         if (editingItem) {
-            await api.patch(`/empresas/${empresaId}/filiais/${editingItem.id}/`, payload);
+            const url = `/empresas/${empresaId}/filiais/${editingItem.id}/`;
+            response = await api.patch(url, payload);
+            setSuccess("Filial atualizada com sucesso!");
         } else {
-            await api.post(`/empresas/${empresaId}/filiais/`, payload);
+            const url = `/empresas/${empresaId}/filiais/`;
+            response = await api.post(url, payload);
+            setSuccess("Filial criada com sucesso!");
         }
-        fetchFiliais();
-        resetForm(); 
+
+        resetForm(); // Primeiro, fecha o modal
+
+        setTimeout(() => {
+            fetchFiliais();
+        }, 300); 
+
     } catch (err: any) {
-        console.error("Erro ao salvar filial:", err.response?.data);
+        if (err.response) {
+            setError(`Erro da API (${err.response.status}): ${JSON.stringify(err.response.data)}`);
+        } else if (err.request) {
+            console.error("TIPO DE ERRO: Sem resposta do servidor.");
+            setError("Erro de rede. Verifique a conexão com a API.");
+        } else {
+            console.error("TIPO DE ERRO: Erro de JavaScript ao montar a requisição.");
+            console.error("MENSAGEM DE ERRO:", err.message);
+            setError(`Erro no código do frontend: ${err.message}`);
+        }
     } finally {
         setLoading(false);
     }
@@ -179,7 +206,11 @@ const handleDelete = async (id: number) => {
     setLoading(true);
     try {
         await api.delete(`/empresas/${empresaId}/filiais/${id}/`);
-        fetchFiliais();
+        
+        setTimeout(() => {
+            fetchFiliais();
+        }, 300);
+
     } catch (err) {
         console.error("Erro ao excluir filial:", err);
     } finally {
