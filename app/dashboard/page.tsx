@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -41,58 +41,7 @@ import {
   UserPlus,
 } from "lucide-react"
 import type { Empresa, Usuario } from "@/types"
-
-const empresasIniciais: Empresa[] = [
-  {
-    id: "1",
-    nome: "TechCorp Ltda.",
-    cnpj: "12.345.678/0001-90",
-    email: "contato@techcorp.com.br",
-    telefone: "(11) 3000-0000",
-    senha: "123456",
-    endereco: {
-      cep: "01310-100",
-      estado: "SP",
-      cidade: "São Paulo",
-      bairro: "Bela Vista",
-      logradouro: "Av. Paulista",
-      numero: "1000",
-      complemento: "Sala 501",
-    },
-  },
-  {
-    id: "2",
-    nome: "InnovaTech S.A.",
-    cnpj: "98.765.432/0001-10",
-    email: "contato@innovatech.com.br",
-    telefone: "(21) 2000-0000",
-    senha: "123456",
-    endereco: {
-      cep: "22240-000",
-      estado: "RJ",
-      cidade: "Rio de Janeiro",
-      bairro: "Laranjeiras",
-      logradouro: "Rua das Laranjeiras",
-      numero: "200",
-    },
-  },
-  {
-    id: "3",
-    nome: "Digital Solutions Ltda.",
-    cnpj: "11.222.333/0001-44",
-    email: "contato@digitalsolutions.com.br",
-    telefone: "(31) 3500-0000",
-    senha: "123456",
-    endereco: {
-      cep: "30130-000",
-      estado: "MG",
-      cidade: "Belo Horizonte",
-      bairro: "Centro",
-      logradouro: "Av. Afonso Pena",
-      numero: "1500",
-    },
-  },
-]
+import api from "@/lib/api"; 
 
 const estados = [
   "AC",
@@ -127,7 +76,8 @@ const estados = [
 export default function DashboardPage() {
   const router = useRouter()
   const [usuario, setUsuario] = useState<Usuario | null>(null)
-  const [empresas, setEmpresas] = useState<Empresa[]>(empresasIniciais)
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isConnectDialogOpen, setIsConnectDialogOpen] = useState(false)
@@ -168,15 +118,28 @@ export default function DashboardPage() {
     gestorEmail: "",
   })
 
-  // Verificar autenticação
-  useEffect(() => {
-    const usuarioData = localStorage.getItem("usuario")
-    if (!usuarioData) {
-      router.push("/")
-      return
+  const fetchEmpresas = useCallback(async (gestorId: number) => {
+    setLoading(true);
+    try {
+      const response = await api.get(`/usuarios/${gestorId}/empresas/`);
+      setEmpresas(response.data);
+    } catch (err) {
+      console.error("Falha ao buscar empresas", err);
+    } finally {
+      setLoading(false);
     }
-    setUsuario(JSON.parse(usuarioData))
-  }, [router])
+  }, []);
+
+  useEffect(() => {
+    const userDataString = localStorage.getItem('userData');
+    if (userDataString) {
+      const userData = JSON.parse(userDataString);
+      setUsuario(userData);
+      fetchEmpresas(userData.id);
+    } else {
+      router.push('/'); 
+    }
+  }, [router, fetchEmpresas]);
 
   const handleLogout = () => {
     localStorage.removeItem("usuario")
@@ -202,62 +165,91 @@ export default function DashboardPage() {
     return value
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-    if (editingItem) {
-      setEmpresas((prev) =>
-        prev.map((item) => (item.id === editingItem.id ? ({ ...item, ...formData } as Empresa) : item)),
-      )
-      setSuccess("Empresa atualizada com sucesso!")
-    } else {
-      const novaEmpresa: Empresa = {
-        id: Date.now().toString(),
-        ...formData,
-      } as Empresa
-
-      setEmpresas((prev) => [...prev, novaEmpresa])
-      setSuccess("Empresa criada com sucesso!")
+    const dadosParaEnviar: Partial<Empresa> = { ...formData };
+    if (!dadosParaEnviar.senha) { 
+      delete dadosParaEnviar.senha;
     }
 
-    resetForm()
-  }
-
-  const handleConnectToCompany = (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-
-    const empresa = empresas.find((emp) => emp.email === connectData.email && emp.senha === connectData.senha)
-
-    if (empresa) {
-      setSuccess(`Conectado com sucesso à empresa ${empresa.nome}!`)
-      setConnectData({ email: "", senha: "" })
-      setIsConnectDialogOpen(false)
-    } else {
-      setError("Email ou senha da empresa incorretos.")
+    try {
+      if (editingItem) {
+        await api.patch(`/empresas/${editingItem.id}/`, dadosParaEnviar);
+        setSuccess("Empresa atualizada com sucesso!");
+      } else {
+        await api.post('/empresas/', dadosParaEnviar);
+        setSuccess("Empresa criada com sucesso!");
+      }
+      
+      if (usuario) {
+        fetchEmpresas(usuario.id);
+      }
+      resetForm();
+    } catch (err: any) {
+      setError("Falha ao salvar. Verifique se o CNPJ ou email já existem.");
+      console.error("Erro ao salvar empresa:", err.response?.data);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
-  const handleAddGestor = (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
+const handleConnectToCompany = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setLoading(true);
 
-    const empresa = empresas.find(
-      (emp) => emp.id === addGestorData.empresaId && emp.senha === addGestorData.empresaSenha,
-    )
+    try {
+        const response = await api.post('/empresas/join-by-email/', {
+            email: connectData.email,
+            senha: connectData.senha,
+        });
 
-    if (!empresa) {
-      setError("Senha da empresa incorreta.")
-      return
+        setSuccess(response.data.message);
+        
+        if (usuario) {
+            fetchEmpresas(usuario.id);
+        }
+        resetConnectForm(); 
+    } catch (err: any) {
+
+        setError(err.response?.data?.error || "Falha ao conectar. Verifique os dados.");
+    } finally {
+        setLoading(false);
     }
+};
 
-    // Aqui você adicionaria a lógica para associar o gestor à empresa
-    // Por enquanto, apenas mostramos uma mensagem de sucesso
-    setSuccess(`Gestor ${addGestorData.gestorEmail} adicionado com sucesso à empresa ${empresa.nome}!`)
-    setAddGestorData({ empresaId: "", empresaSenha: "", gestorEmail: "" })
-    setIsAddGestorDialogOpen(false)
-  }
+  const handleAddGestor = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!addGestorData.empresaId || !addGestorData.gestorEmail || !addGestorData.empresaSenha) {
+        setError("Por favor, preencha todos os campos para adicionar um gestor.");
+        return;
+    }
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+        const payload = {
+            usuario_email: addGestorData.gestorEmail,
+            senha_da_empresa: addGestorData.empresaSenha
+        };
+        const url = `/empresas/${addGestorData.empresaId}/gestores/`;
+        await api.post(url, payload);
+
+        setSuccess(`Gestor ${addGestorData.gestorEmail} adicionado com sucesso!`);
+        resetAddGestorForm();
+
+    } catch (err: any) {
+        const errorMessage = err.response?.data?.detail || err.response?.data?.error || "Falha ao adicionar gestor.";
+        setError(errorMessage);
+    } finally {
+        setLoading(false);
+    }
+};
 
   const handleEdit = (item: Empresa) => {
     setEditingItem(item)
@@ -266,10 +258,21 @@ export default function DashboardPage() {
     setIsDialogOpen(true)
   }
 
-  const handleDelete = (id: string) => {
-    setEmpresas((prev) => prev.filter((item) => item.id !== id))
-    setSuccess("Empresa excluída com sucesso!")
-  }
+  const handleDelete = async (id: number) => { 
+    setLoading(true);
+    try {
+      await api.delete(`/empresas/${id}/`);
+      setSuccess("Empresa excluída com sucesso!");
+      if (usuario) {
+        fetchEmpresas(usuario.id);
+      }
+    } catch (err) {
+      setError("Falha ao excluir a empresa.");
+      console.error("Erro ao excluir empresa:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -487,7 +490,7 @@ export default function DashboardPage() {
                           </SelectTrigger>
                           <SelectContent>
                             {empresas.map((empresa) => (
-                              <SelectItem key={empresa.id} value={empresa.id}>
+                              <SelectItem key={empresa.id} value={String(empresa.id)}>
                                 <div className="flex flex-col">
                                   <span className="font-medium">{empresa.nome}</span>
                                   <span className="text-sm text-gray-500">{empresa.email}</span>
@@ -844,7 +847,7 @@ export default function DashboardPage() {
 
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Lock className="w-4 h-4" />
-                    <span>Senha: {"*".repeat(empresa.senha.length)}</span>
+                    <span>Senha: ********</span>
                   </div>
                 </div>
 

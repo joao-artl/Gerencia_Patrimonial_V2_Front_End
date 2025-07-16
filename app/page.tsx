@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react" 
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,66 +11,23 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Building2, Mail, Lock, User, Eye, EyeOff, CreditCard } from "lucide-react"
+import api from "@/lib/api";
 
 interface Usuario {
   id: string
   cpf: string
   nome: string
   email: string
-  tipoUsuario: "gestor" | "funcionario"
-  filialId?: string
-  empresaId?: string
+  tipo_usuario: "GESTOR" | "FUNCIONARIO"
+  filial_associada?: number
+  empresaId?: number
   senha: string
   dataRegistro: string
 }
 
-// Dados mockados de usuários
-const usuariosIniciais: Usuario[] = [
-  {
-    id: "1",
-    cpf: "123.456.789-00",
-    nome: "João Silva",
-    email: "joao@techcorp.com.br",
-    tipoUsuario: "gestor",
-    senha: "123456",
-    dataRegistro: "2023-01-15",
-  },
-  {
-    id: "2",
-    cpf: "987.654.321-00",
-    nome: "Maria Santos",
-    email: "maria@innovatech.com.br",
-    tipoUsuario: "gestor",
-    senha: "123456",
-    dataRegistro: "2023-02-20",
-  },
-  {
-    id: "3",
-    cpf: "456.789.123-00",
-    nome: "Carlos Oliveira",
-    email: "carlos@techcorp.com.br",
-    tipoUsuario: "funcionario",
-    filialId: "1",
-    empresaId: "1",
-    senha: "123456",
-    dataRegistro: "2023-03-10",
-  },
-  {
-    id: "4",
-    cpf: "789.123.456-00",
-    nome: "Ana Costa",
-    email: "ana@innovatech.com.br",
-    tipoUsuario: "funcionario",
-    filialId: "4",
-    empresaId: "2",
-    senha: "123456",
-    dataRegistro: "2023-03-15",
-  },
-]
-
 export default function AuthPage() {
   const router = useRouter()
-  const [usuarios, setUsuarios] = useState<Usuario[]>(usuariosIniciais)
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false)
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
   const [error, setError] = useState("")
@@ -92,35 +49,46 @@ export default function AuthPage() {
     confirmarSenha: "",
   })
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
+  useEffect(() => {
 
-    // Simular delay de autenticação
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    if (redirectUrl) {
+      router.push(redirectUrl);
+      }
+    }, [redirectUrl, router]);
 
-    const usuario = usuarios.find((u) => u.email === loginData.email && u.senha === loginData.senha)
+const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setSuccess("");
 
-    if (usuario) {
-      // Salvar dados do usuário no localStorage
-      localStorage.setItem("usuario", JSON.stringify(usuario))
-      setSuccess("Login realizado com sucesso!")
+    try {
+        const response = await api.post('/token/', {
+            email: loginData.email,
+            senha: loginData.senha,
+        });
 
-      // Redirecionar baseado no tipo de usuário
-      setTimeout(() => {
-        if (usuario.tipoUsuario === "gestor") {
-          router.push("/dashboard")
-        } else {
-          router.push("/funcionario")
+        const usuario = response.data.usuario;
+
+        localStorage.setItem('accessToken', response.data.access);
+        localStorage.setItem('refreshToken', response.data.refresh);
+        localStorage.setItem('userData', JSON.stringify(usuario));
+        
+        setSuccess("Login realizado com sucesso! Redirecionando...");
+
+        if (usuario.tipo_usuario === "GESTOR") {
+            setRedirectUrl("/dashboard");
+        } else if (usuario.tipo_usuario === "FUNCIONARIO") {
+            setRedirectUrl("/funcionario");
         }
-      }, 1000)
-    } else {
-      setError("Email ou senha incorretos.")
-    }
 
-    setLoading(false)
-  }
+    } catch (err) {
+        setError("Email ou senha incorretos.");
+        console.error("Erro no login:", err);
+    } finally {
+        setLoading(false);
+    }
+};
 
   const formatCPF = (value: string) => {
     // Remove tudo que não é dígito
@@ -176,44 +144,31 @@ export default function AuthPage() {
       return
     }
 
-    // Verificar se CPF já existe
-    if (usuarios.some((u) => u.cpf === cadastroData.cpf)) {
-      setError("Este CPF já está cadastrado.")
-      setLoading(false)
-      return
+    try {
+        const payload = {
+            cpf: cadastroData.cpf.replace(/\D/g, ''),
+            nome: cadastroData.nome,
+            email: cadastroData.email,
+            senha: cadastroData.senha,
+            tipo_usuario: "GESTOR",
+        };
+
+        await api.post('/usuarios/', payload);
+
+        setSuccess("Conta criada com sucesso! Por favor, use a aba 'Entrar' para fazer o login.");
+        resetForms();
+
+    } catch (err: any) {
+        if (err.response && err.response.data) {
+            const apiErrors = err.response.data;
+            const firstErrorKey = Object.keys(apiErrors)[0];
+            const firstErrorMessage = Array.isArray(apiErrors[firstErrorKey]) ? apiErrors[firstErrorKey][0] : String(apiErrors[firstErrorKey]);
+            setError(firstErrorMessage);
+        } else {
+            setError("Não foi possível criar a conta. Tente novamente mais tarde.");
+        }
+        console.error("Erro no cadastro:", err);
     }
-
-    // Verificar se email já existe
-    if (usuarios.some((u) => u.email === cadastroData.email)) {
-      setError("Este email já está cadastrado.")
-      setLoading(false)
-      return
-    }
-
-    // Simular delay de cadastro
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    const novoUsuario: Usuario = {
-      id: Date.now().toString(),
-      cpf: cadastroData.cpf,
-      nome: cadastroData.nome,
-      email: cadastroData.email,
-      tipoUsuario: "gestor", // Por padrão, novos usuários são gestores
-      senha: cadastroData.senha,
-      dataRegistro: new Date().toISOString().split("T")[0],
-    }
-
-    setUsuarios((prev) => [...prev, novoUsuario])
-
-    // Salvar dados do usuário no localStorage
-    localStorage.setItem("usuario", JSON.stringify(novoUsuario))
-    setSuccess("Conta criada com sucesso!")
-
-    // Redirecionar após 1 segundo
-    setTimeout(() => {
-      router.push("/dashboard")
-    }, 1000)
-
     setLoading(false)
   }
 
