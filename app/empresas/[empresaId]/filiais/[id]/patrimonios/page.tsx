@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { useState, useMemo } from "react"
-import { useParams } from "next/navigation"
+import { useState, useMemo, useCallback, useEffect } from "react"
+import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import api from "@/lib/api";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,64 +41,6 @@ import {
   Palette,
 } from "lucide-react"
 import type { Patrimonio, Imovel, Veiculo, Utilitario } from "@/types"
-
-// Dados mockados atualizados com nova estrutura
-const getPatrimoniosPorFilial = (filialId: string): Patrimonio[] => {
-  const todosPatrimonios: Patrimonio[] = [
-    {
-      id: "1",
-      empresaId: "1",
-      filialId: "1",
-      nome: "Sede Principal",
-      tipo: "imovel",
-      valor: 850000,
-      area: 500,
-      tipoImovel: "Comercial",
-      endereco: {
-        cep: "01310-100",
-        estado: "SP",
-        cidade: "São Paulo",
-        bairro: "Bela Vista",
-        logradouro: "Av. Paulista",
-        numero: "1000",
-        complemento: "Sala 501",
-      },
-    } as Imovel,
-    {
-      id: "2",
-      empresaId: "1",
-      filialId: "1",
-      nome: "Veículo Corporativo",
-      tipo: "veiculo",
-      valor: 45000,
-      quantidade: 1,
-      cor: "Prata",
-      modelo: "Civic",
-      fabricante: "Honda",
-    } as Veiculo,
-    {
-      id: "6",
-      empresaId: "1",
-      filialId: "1",
-      nome: "Notebook Dell",
-      tipo: "utilitario",
-      valor: 3500,
-      quantidade: 5,
-      descricao: "Notebooks para desenvolvimento de software",
-      funcao: "Equipamento de TI",
-    } as Utilitario,
-  ]
-
-  return todosPatrimonios.filter((p) => p.filialId === filialId)
-}
-
-const filiais = [
-  { id: "1", nome: "Matriz São Paulo" },
-  { id: "2", nome: "Filial Rio de Janeiro" },
-  { id: "3", nome: "Filial Belo Horizonte" },
-  { id: "4", nome: "Filial Porto Alegre" },
-  { id: "5", nome: "Filial Recife" },
-]
 
 const tiposImovel = [
   "Comercial",
@@ -140,20 +83,58 @@ const estados = [
   "TO",
 ]
 
-export default function PatrimoniosFilialPage() {
-  const params = useParams()
-  const empresaId = params.empresaId as string
-  const filialId = params.id as string
 
-  const filial = filiais.find((f) => f.id === filialId)
-  const [patrimonios, setPatrimonios] = useState<Patrimonio[]>(getPatrimoniosPorFilial(filialId))
+
+
+export default function PatrimoniosFilialPage() {
+  const params = useParams();
+  const router = useRouter();
+  const empresaId = params.empresaId as string;
+  const filialId = params.id as string;
+  const [filial, setFilial] = useState<{ nome: string } | null>(null);
+  const [patrimonios, setPatrimonios] = useState<any[]>([]); 
+  const [loading, setLoading] = useState(true);
+
+  const fetchPatrimonios = useCallback(async () => {
+    if (!empresaId || !filialId) return;
+    setLoading(true);
+    try {
+      const [resFilial, resPatrimonios] = await Promise.all([
+        api.get(`/empresas/${empresaId}/filiais/${filialId}/`),
+        api.get(`/empresas/${empresaId}/filiais/${filialId}/patrimonios/`)
+      ]);
+
+      setFilial(resFilial.data);
+
+      const patrimoniosAgrupados = resPatrimonios.data;
+      const listaCompleta = [
+        ...patrimoniosAgrupados.veiculos.map((p: any) => ({ ...p, tipo: 'veiculo' })),
+        ...patrimoniosAgrupados.utilitarios.map((p: any) => ({ ...p, tipo: 'utilitario' })),
+        ...patrimoniosAgrupados.imobiliarios.map((p: any) => ({ ...p, tipo: 'imovel' })),
+      ];
+      setPatrimonios(listaCompleta);
+
+    } catch (err) {
+      console.error("Falha ao buscar dados da filial:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [empresaId, filialId]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      router.push('/');
+      return;
+    }
+    fetchPatrimonios();
+  }, [fetchPatrimonios, router]);
   const [searchTerm, setSearchTerm] = useState("")
   const [filterTipo, setFilterTipo] = useState<string>("todos")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<Patrimonio | null>(null)
   const [tipoSelecionado, setTipoSelecionado] = useState<"imovel" | "veiculo" | "utilitario">("imovel")
 
-  // Estados para formulário de imóvel
   const [formDataImovel, setFormDataImovel] = useState<Partial<Imovel>>({
     nome: "",
     valor: 0,
@@ -170,7 +151,6 @@ export default function PatrimoniosFilialPage() {
     },
   })
 
-  // Estados para formulário de veículo
   const [formDataVeiculo, setFormDataVeiculo] = useState<Partial<Veiculo>>({
     nome: "",
     valor: 0,
@@ -180,7 +160,6 @@ export default function PatrimoniosFilialPage() {
     fabricante: "",
   })
 
-  // Estados para formulário de utilitário
   const [formDataUtilitario, setFormDataUtilitario] = useState<Partial<Utilitario>>({
     nome: "",
     valor: 0,
@@ -231,45 +210,50 @@ export default function PatrimoniosFilialPage() {
     return value
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-    let novoPatrimonio: Patrimonio
+    let endpoint = "";
+    let payload: any = {};
 
     if (tipoSelecionado === "imovel") {
-      novoPatrimonio = {
-        id: editingItem?.id || Date.now().toString(),
-        empresaId: "1",
-        filialId: filialId,
-        tipo: "imovel",
-        ...formDataImovel,
-      } as Imovel
+        endpoint = "imobiliarios";
+        payload = {
+            nome: formDataImovel.nome,
+            valor: formDataImovel.valor,
+            area: formDataImovel.area,
+            tipo: formDataImovel.tipoImovel,
+            endereco: formDataImovel.endereco,
+        };
+        if (payload.endereco?.cep) {
+            payload.endereco.cep = payload.endereco.cep.replace(/\D/g, '');
+        }
     } else if (tipoSelecionado === "veiculo") {
-      novoPatrimonio = {
-        id: editingItem?.id || Date.now().toString(),
-        empresaId: "1",
-        filialId: filialId,
-        tipo: "veiculo",
-        ...formDataVeiculo,
-      } as Veiculo
+        endpoint = "veiculos";
+        payload = { ...formDataVeiculo };
     } else {
-      novoPatrimonio = {
-        id: editingItem?.id || Date.now().toString(),
-        empresaId: "1",
-        filialId: filialId,
-        tipo: "utilitario",
-        ...formDataUtilitario,
-      } as Utilitario
+        endpoint = "utilitarios";
+        payload = { ...formDataUtilitario };
     }
 
-    if (editingItem) {
-      setPatrimonios((prev) => prev.map((item) => (item.id === editingItem.id ? novoPatrimonio : item)))
-    } else {
-      setPatrimonios((prev) => [...prev, novoPatrimonio])
-    }
+    try {
+        const baseUrl = `/empresas/${empresaId}/filiais/${filialId}/${endpoint}/`;
+        if (editingItem) {
+            await api.patch(`${baseUrl}${editingItem.id}/`, payload);
+        } else {
+            await api.post(baseUrl, payload);
+        }
 
-    resetForm()
-  }
+        resetForm();
+        setTimeout(() => fetchPatrimonios(), 300); 
+
+    } catch (err: any) {
+        console.error("Erro ao salvar patrimônio:", err.response?.data);
+    } finally {
+        setLoading(false);
+    }
+};
 
   const handleEdit = (item: Patrimonio) => {
     setEditingItem(item)
@@ -286,9 +270,33 @@ export default function PatrimoniosFilialPage() {
     setIsDialogOpen(true)
   }
 
-  const handleDelete = (id: string) => {
-    setPatrimonios((prev) => prev.filter((item) => item.id !== id))
-  }
+  const handleDelete = async (item: Patrimonio) => {
+      setLoading(true);
+      const { id, tipo } = item;
+      const endpoint = `${tipo === 'imovel' ? 'imobiliario' : tipo}s`;
+
+      try {
+          await api.delete(`/empresas/${empresaId}/filiais/${filialId}/${endpoint}/${id}/`);
+          setTimeout(() => fetchPatrimonios(), 300); 
+      } catch (err) {
+          console.error("Erro ao excluir patrimônio:", err);
+      } finally {
+          setLoading(false);
+      }
+  };
+
+  const valorTotalFiltrado = useMemo(() => {
+    return patrimoniosFiltrados.reduce((acc, item) => {
+        const valorUnitario = parseFloat(item.valor);
+        const quantidade = parseInt(item.quantidade, 10);
+        
+        if (isNaN(valorUnitario) || isNaN(quantidade)) {
+            return acc;
+        }
+
+        return acc + (valorUnitario * quantidade);
+    }, 0);
+  }, [patrimoniosFiltrados]); 
 
   const resetForm = () => {
     setFormDataImovel({
@@ -859,7 +867,7 @@ export default function PatrimoniosFilialPage() {
               <div>
                 <p className="text-sm text-gray-600">Valor Total</p>
                 <p className="text-xl font-bold">
-                  {formatCurrency(patrimoniosFiltrados.reduce((sum, item) => sum + item.valor, 0))}
+                  {formatCurrency(valorTotalFiltrado)}
                 </p>
               </div>
               <div className="text-green-500">
@@ -932,7 +940,7 @@ export default function PatrimoniosFilialPage() {
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() => handleDelete(item.id)}
+                          onClick={() => handleDelete(item)}
                           className="bg-red-600 hover:bg-red-700"
                         >
                           Excluir
