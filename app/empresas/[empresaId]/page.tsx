@@ -1,89 +1,101 @@
 "use client"
 
+import { useState, useMemo, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Building, Users, MapPin, DollarSign, TrendingUp, Building2, UserCheck, Activity } from "lucide-react"
+import Link from "next/link" 
+import api from "@/lib/api";
 
-// Dados mockados por empresa
-const getEmpresaData = (empresaId: string) => {
-  const empresasData = {
-    "1": {
-      empresa: {
-        nome: "TechCorp Ltda.",
-        cnpj: "12.345.678/0001-90",
-        filiais: 5,
-        funcionarios: 127,
-        patrimonioTotal: 2850000,
-      },
-      filiais: [
-        { id: "1", nome: "Matriz São Paulo", funcionarios: 45, patrimonio: 1200000, status: "ativa" },
-        { id: "2", nome: "Filial Rio de Janeiro", funcionarios: 32, patrimonio: 850000, status: "ativa" },
-        { id: "3", nome: "Filial Belo Horizonte", funcionarios: 28, patrimonio: 450000, status: "ativa" },
-        { id: "4", nome: "Filial Porto Alegre", funcionarios: 22, patrimonio: 350000, status: "ativa" },
-      ],
-      patrimoniosPorTipo: {
-        imoveis: { quantidade: 12, valor: 1800000 },
-        veiculos: { quantidade: 25, valor: 750000 },
-        utilitarios: { quantidade: 89, valor: 300000 },
-      },
-    },
-    "2": {
-      empresa: {
-        nome: "InnovaTech S.A.",
-        cnpj: "98.765.432/0001-10",
-        filiais: 3,
-        funcionarios: 85,
-        patrimonioTotal: 1950000,
-      },
-      filiais: [
-        { id: "1", nome: "Sede Rio de Janeiro", funcionarios: 40, patrimonio: 900000, status: "ativa" },
-        { id: "2", nome: "Filial São Paulo", funcionarios: 30, patrimonio: 650000, status: "ativa" },
-        { id: "3", nome: "Filial Brasília", funcionarios: 15, patrimonio: 400000, status: "ativa" },
-      ],
-      patrimoniosPorTipo: {
-        imoveis: { quantidade: 8, valor: 1200000 },
-        veiculos: { quantidade: 18, valor: 550000 },
-        utilitarios: { quantidade: 45, valor: 200000 },
-      },
-    },
-    "3": {
-      empresa: {
-        nome: "Digital Solutions Ltda.",
-        cnpj: "11.222.333/0001-44",
-        filiais: 2,
-        funcionarios: 45,
-        patrimonioTotal: 850000,
-      },
-      filiais: [
-        { id: "1", nome: "Matriz Belo Horizonte", funcionarios: 30, patrimonio: 500000, status: "ativa" },
-        { id: "2", nome: "Filial Uberlândia", funcionarios: 15, patrimonio: 350000, status: "ativa" },
-      ],
-      patrimoniosPorTipo: {
-        imoveis: { quantidade: 4, valor: 600000 },
-        veiculos: { quantidade: 8, valor: 150000 },
-        utilitarios: { quantidade: 25, valor: 100000 },
-      },
-    },
-  }
-
-  return empresasData[empresaId as keyof typeof empresasData] || empresasData["1"]
+interface Empresa { id: number; nome: string; cnpj: string; }
+interface Filial { id: number; nome: string; }
+interface Funcionario { id: number; nome: string; }
+interface PatrimonioPorFilial {
+    veiculos: any[];
+    utilitarios: any[];
+    imobiliarios: any[];
 }
 
 export default function EmpresaDashboard() {
   const params = useParams()
   const router = useRouter()
-  const empresaId = params.empresaId as string
-  const dashboardData = getEmpresaData(empresaId)
+  const empresaId = params.id as string;
+  const [empresa, setEmpresa] = useState<Empresa | null>(null);
+  const [filiais, setFiliais] = useState<Filial[]>([]);
+  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
+  const [patrimonios, setPatrimonios] = useState<Record<string, PatrimonioPorFilial>>({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const gestorData = localStorage.getItem("gestor")
-    if (!gestorData) {
-      router.push("/")
-      return
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      router.push('/'); 
+      return;
     }
-  }, [router])
+
+    if (empresaId) { 
+      const fetchData = async () => {
+        setLoading(true);
+      try {
+          const [resEmpresa, resFiliais, resFuncionarios, resPatrimonios] = await Promise.all([
+            api.get(`/empresas/${empresaId}/`),
+            api.get(`/empresas/${empresaId}/filiais/`),
+            api.get(`/empresas/${empresaId}/funcionarios/`),
+            api.get(`/empresas/${empresaId}/patrimonios/`)]); 
+          setEmpresa(resEmpresa.data);
+          setFiliais(resFiliais.data);
+          setFuncionarios(resFuncionarios.data);
+          setPatrimonios(resPatrimonios.data);
+        } catch (err) {
+          console.error("Falha ao carregar dados do dashboard:", err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchData();
+    }
+  }, [empresaId, router]);
+
+  const metricas = useMemo(() => {
+    if (!empresa) {
+
+        return {
+            totalFiliais: 0,
+            totalFuncionarios: 0,
+            patrimonioTotal: 0
+        };
+    }
+
+    let patrimonioTotal = 0;
+    Object.values(patrimonios).forEach((filial: any) => {
+        const todosOsItens = [...filial.veiculos, ...filial.utilitarios, ...filial.imobiliarios];
+        patrimonioTotal += todosOsItens.reduce((acc, item: any) => acc + parseFloat(item.valor), 0);
+    });
+
+    return {
+        totalFiliais: filiais.length,
+        totalFuncionarios: funcionarios.length,
+        patrimonioTotal: patrimonioTotal
+    };
+  }, [empresa, filiais, funcionarios, patrimonios]); 
+
+  const patrimonioPorCategoria = useMemo(() => {
+    const categorias = {
+      imoveis: { quantidade: 0, valor: 0 },
+      veiculos: { quantidade: 0, valor: 0 },
+      utilitarios: { quantidade: 0, valor: 0 },
+    };
+    Object.values(patrimonios).forEach((filial: any) => {
+        categorias.veiculos.quantidade += filial.veiculos.length;
+        categorias.veiculos.valor += filial.veiculos.reduce((acc, item: any) => acc + parseFloat(item.valor), 0);
+        categorias.utilitarios.quantidade += filial.utilitarios.length;
+        categorias.utilitarios.valor += filial.utilitarios.reduce((acc, item: any) => acc + parseFloat(item.valor), 0);
+        categorias.imoveis.quantidade += filial.imobiliarios.length;
+        categorias.imoveis.valor += filial.imobiliarios.reduce((acc, item: any) => acc + parseFloat(item.valor), 0);
+    });
+    return categorias;
+  }, [patrimonios]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -97,7 +109,7 @@ export default function EmpresaDashboard() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Empresarial</h1>
-        <p className="text-gray-600">Visão geral da {dashboardData.empresa.nome}</p>
+        <p className="text-gray-600">Visão geral da {empresa?.nome}</p>
       </div>
 
       {/* Métricas principais */}
@@ -107,7 +119,7 @@ export default function EmpresaDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Total de Filiais</p>
-                <p className="text-3xl font-bold text-blue-600">{dashboardData.empresa.filiais}</p>
+                <p className="text-3xl font-bold text-blue-600">{filiais.length}</p>
               </div>
               <Building className="w-10 h-10 text-blue-500" />
             </div>
@@ -119,7 +131,7 @@ export default function EmpresaDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Total de Funcionários</p>
-                <p className="text-3xl font-bold text-green-600">{dashboardData.empresa.funcionarios}</p>
+                <p className="text-3xl font-bold text-green-600">{funcionarios.length}</p>
               </div>
               <Users className="w-10 h-10 text-green-500" />
             </div>
@@ -132,7 +144,7 @@ export default function EmpresaDashboard() {
               <div>
                 <p className="text-sm text-gray-600">Patrimônio Total</p>
                 <p className="text-2xl font-bold text-purple-600">
-                  {formatCurrency(dashboardData.empresa.patrimonioTotal)}
+                  {formatCurrency(metricas.patrimonioTotal)}
                 </p>
               </div>
               <DollarSign className="w-10 h-10 text-purple-500" />
@@ -152,15 +164,11 @@ export default function EmpresaDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {dashboardData.filiais.map((filial) => (
+              {filiais.map((filial) => (
                 <div key={filial.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div>
                     <h4 className="font-medium text-gray-900">{filial.nome}</h4>
                     <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
-                      <span className="flex items-center gap-1">
-                        <UserCheck className="w-4 h-4" />
-                        {filial.funcionarios} funcionários
-                      </span>
                       <Badge variant="outline" className="text-green-600 border-green-200">
                         {filial.status}
                       </Badge>
@@ -176,7 +184,7 @@ export default function EmpresaDashboard() {
           </CardContent>
         </Card>
 
-        {/* Patrimônio por tipo */}
+{/* Card de Patrimônio por Categoria -- AGORA COM DADOS REAIS */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -186,6 +194,7 @@ export default function EmpresaDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
+              {/* --- Imóveis --- */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -193,22 +202,25 @@ export default function EmpresaDashboard() {
                   </div>
                   <div>
                     <p className="font-medium text-gray-900">Imóveis</p>
-                    <p className="text-sm text-gray-500">{dashboardData.patrimoniosPorTipo.imoveis.quantidade} itens</p>
+                    {/* Usa o novo objeto de cálculo 'patrimonioPorCategoria' */}
+                    <p className="text-sm text-gray-500">{patrimonioPorCategoria.imoveis.quantidade} itens</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-gray-900">
-                    {formatCurrency(dashboardData.patrimoniosPorTipo.imoveis.valor)}
+                    {formatCurrency(patrimonioPorCategoria.imoveis.valor)}
                   </p>
                   <p className="text-sm text-gray-500">
-                    {Math.round(
-                      (dashboardData.patrimoniosPorTipo.imoveis.valor / dashboardData.empresa.patrimonioTotal) * 100,
-                    )}
+                    {/* Usa os novos objetos de cálculo e evita divisão por zero */}
+                    {metricas.patrimonioTotal > 0 ? Math.round(
+                      (patrimonioPorCategoria.imoveis.valor / metricas.patrimonioTotal) * 100
+                    ) : 0}
                     % do total
                   </p>
                 </div>
               </div>
 
+              {/* --- Veículos --- */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
@@ -217,23 +229,24 @@ export default function EmpresaDashboard() {
                   <div>
                     <p className="font-medium text-gray-900">Veículos</p>
                     <p className="text-sm text-gray-500">
-                      {dashboardData.patrimoniosPorTipo.veiculos.quantidade} itens
+                      {patrimonioPorCategoria.veiculos.quantidade} itens
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-gray-900">
-                    {formatCurrency(dashboardData.patrimoniosPorTipo.veiculos.valor)}
+                    {formatCurrency(patrimonioPorCategoria.veiculos.valor)}
                   </p>
                   <p className="text-sm text-gray-500">
-                    {Math.round(
-                      (dashboardData.patrimoniosPorTipo.veiculos.valor / dashboardData.empresa.patrimonioTotal) * 100,
-                    )}
+                    {metricas.patrimonioTotal > 0 ? Math.round(
+                      (patrimonioPorCategoria.veiculos.valor / metricas.patrimonioTotal) * 100
+                    ) : 0}
                     % do total
                   </p>
                 </div>
               </div>
 
+              {/* --- Utilitários --- */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -242,19 +255,18 @@ export default function EmpresaDashboard() {
                   <div>
                     <p className="font-medium text-gray-900">Utilitários</p>
                     <p className="text-sm text-gray-500">
-                      {dashboardData.patrimoniosPorTipo.utilitarios.quantidade} itens
+                      {patrimonioPorCategoria.utilitarios.quantidade} itens
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-gray-900">
-                    {formatCurrency(dashboardData.patrimoniosPorTipo.utilitarios.valor)}
+                    {formatCurrency(patrimonioPorCategoria.utilitarios.valor)}
                   </p>
                   <p className="text-sm text-gray-500">
-                    {Math.round(
-                      (dashboardData.patrimoniosPorTipo.utilitarios.valor / dashboardData.empresa.patrimonioTotal) *
-                        100,
-                    )}
+                    {metricas.patrimonioTotal > 0 ? Math.round(
+                      (patrimonioPorCategoria.utilitarios.valor / metricas.patrimonioTotal) * 100
+                    ) : 0}
                     % do total
                   </p>
                 </div>
@@ -264,7 +276,7 @@ export default function EmpresaDashboard() {
         </Card>
       </div>
 
-      {/* Informações da empresa */}
+      {/* Informações da empresa -- AGORA COM DADOS REAIS */}
       <Card className="mt-8">
         <CardHeader>
           <CardTitle>Informações da Empresa</CardTitle>
@@ -273,11 +285,12 @@ export default function EmpresaDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <p className="text-sm text-gray-600">Razão Social</p>
-              <p className="font-medium text-gray-900">{dashboardData.empresa.nome}</p>
+              {/* Usa o estado 'empresa' e o optional chaining (?.) para segurança */}
+              <p className="font-medium text-gray-900">{empresa?.nome}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600">CNPJ</p>
-              <p className="font-medium text-gray-900">{dashboardData.empresa.cnpj}</p>
+              <p className="font-medium text-gray-900">{empresa?.cnpj}</p>
             </div>
           </div>
         </CardContent>
