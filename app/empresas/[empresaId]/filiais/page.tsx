@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useMemo } from "react"
+import { useState, useMemo,useCallback, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,96 +22,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Building, Search, Plus, Edit, Trash2, MapPin, Phone, Mail, Eye, Lock, EyeOff, CreditCard } from "lucide-react"
 import type { Filial } from "@/types"
-import { useParams } from "next/navigation"
-
-const filiaisIniciais: Filial[] = [
-  {
-    id: "1",
-    empresaId: "1",
-    nome: "Matriz São Paulo",
-    cnpj: "12.345.678/0001-91",
-    email: "matriz@techcorp.com.br",
-    telefone: "(11) 3000-1000",
-    senha: "123456",
-    endereco: {
-      cep: "01310-100",
-      estado: "SP",
-      cidade: "São Paulo",
-      bairro: "Bela Vista",
-      logradouro: "Av. Paulista",
-      numero: "1000",
-      complemento: "Sala 501",
-    },
-  },
-  {
-    id: "2",
-    empresaId: "1",
-    nome: "Filial Rio de Janeiro",
-    cnpj: "12.345.678/0002-72",
-    email: "rj@techcorp.com.br",
-    telefone: "(21) 3000-2000",
-    senha: "123456",
-    endereco: {
-      cep: "22240-000",
-      estado: "RJ",
-      cidade: "Rio de Janeiro",
-      bairro: "Laranjeiras",
-      logradouro: "Rua das Laranjeiras",
-      numero: "500",
-    },
-  },
-  {
-    id: "3",
-    empresaId: "1",
-    nome: "Filial Belo Horizonte",
-    cnpj: "12.345.678/0003-53",
-    email: "bh@techcorp.com.br",
-    telefone: "(31) 3000-3000",
-    senha: "123456",
-    endereco: {
-      cep: "30130-000",
-      estado: "MG",
-      cidade: "Belo Horizonte",
-      bairro: "Centro",
-      logradouro: "Av. Afonso Pena",
-      numero: "800",
-    },
-  },
-  {
-    id: "4",
-    empresaId: "1",
-    nome: "Filial Porto Alegre",
-    cnpj: "12.345.678/0004-34",
-    email: "poa@techcorp.com.br",
-    telefone: "(51) 3000-4000",
-    senha: "123456",
-    endereco: {
-      cep: "90010-000",
-      estado: "RS",
-      cidade: "Porto Alegre",
-      bairro: "Centro Histórico",
-      logradouro: "Rua dos Andradas",
-      numero: "300",
-    },
-  },
-  {
-    id: "5",
-    empresaId: "1",
-    nome: "Filial Recife",
-    cnpj: "12.345.678/0005-15",
-    email: "recife@techcorp.com.br",
-    telefone: "(81) 3000-5000",
-    senha: "123456",
-    endereco: {
-      cep: "51020-000",
-      estado: "PE",
-      cidade: "Recife",
-      bairro: "Boa Viagem",
-      logradouro: "Av. Boa Viagem",
-      numero: "200",
-    },
-  },
-]
+import { useParams, useRouter } from "next/navigation"
+import api from "@/lib/api"
 
 const estados = [
   "AC",
@@ -145,10 +56,12 @@ const estados = [
 ]
 
 export default function FiliaisPage() {
-  const params = useParams()
-  const empresaId = params.empresaId as string
+  const params = useParams();
+  const router = useRouter(); 
+  const empresaId = params.empresaId as string;
 
-  const [filiais, setFiliais] = useState<Filial[]>(filiaisIniciais)
+  const [filiais, setFiliais] = useState<Filial[]>([]);
+  const [loading, setLoading] = useState(true); 
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<Filial | null>(null)
@@ -169,6 +82,31 @@ export default function FiliaisPage() {
       complemento: "",
     },
   })
+
+useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+        router.push('/');
+        return;
+    }
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const response = await api.get(`/empresas/${empresaId}/filiais/`);
+            setFiliais(response.data);
+        } catch (err) {
+            console.error("Falha ao buscar filiais", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (empresaId) {
+        fetchData();
+    }
+
+}, [empresaId, router]); 
 
   const filiaisFiltradas = useMemo(() => {
     return filiais.filter((filial) => {
@@ -207,25 +145,29 @@ export default function FiliaisPage() {
     return partes.join(", ")
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-    if (editingItem) {
-      setFiliais((prev) =>
-        prev.map((item) => (item.id === editingItem.id ? ({ ...item, ...formData } as Filial) : item)),
-      )
-    } else {
-      const novaFilial: Filial = {
-        id: Date.now().toString(),
-        empresaId: "1",
-        ...formData,
-      } as Filial
-
-      setFiliais((prev) => [...prev, novaFilial])
+    const payload = { ...formData };
+    if (!payload.senha) {
+        delete payload.senha;
     }
 
-    resetForm()
-  }
+    try {
+        if (editingItem) {
+            await api.patch(`/empresas/${empresaId}/filiais/${editingItem.id}/`, payload);
+        } else {
+            await api.post(`/empresas/${empresaId}/filiais/`, payload);
+        }
+        fetchFiliais();
+        resetForm(); 
+    } catch (err: any) {
+        console.error("Erro ao salvar filial:", err.response?.data);
+    } finally {
+        setLoading(false);
+    }
+};
 
   const handleEdit = (item: Filial) => {
     setEditingItem(item)
@@ -233,9 +175,17 @@ export default function FiliaisPage() {
     setIsDialogOpen(true)
   }
 
-  const handleDelete = (id: string) => {
-    setFiliais((prev) => prev.filter((item) => item.id !== id))
-  }
+const handleDelete = async (id: number) => { 
+    setLoading(true);
+    try {
+        await api.delete(`/empresas/${empresaId}/filiais/${id}/`);
+        fetchFiliais();
+    } catch (err) {
+        console.error("Erro ao excluir filial:", err);
+    } finally {
+        setLoading(false);
+    }
+};
 
   const resetForm = () => {
     setFormData({
@@ -591,7 +541,7 @@ export default function FiliaisPage() {
 
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Lock className="w-4 h-4" />
-                  <span>Senha: {"*".repeat(filial.senha.length)}</span>
+                  <span>Senha: ********</span>
                 </div>
               </div>
             </CardContent>
