@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -19,147 +19,28 @@ import {
   Palette,
 } from "lucide-react"
 import type { Patrimonio, Imovel, Veiculo, Utilitario } from "@/types"
-
-// Dados mockados com patrimônios de diferentes filiais usando nova estrutura
-const patrimoniosGlobais: Patrimonio[] = [
-  {
-    id: "1",
-    empresaId: "1",
-    filialId: "1",
-    nome: "Sede Principal SP",
-    tipo: "imovel",
-    valor: 850000,
-    area: 500,
-    tipoImovel: "Comercial",
-    endereco: {
-      cep: "01310-100",
-      estado: "SP",
-      cidade: "São Paulo",
-      bairro: "Bela Vista",
-      logradouro: "Av. Paulista",
-      numero: "1000",
-      complemento: "Sala 501",
-    },
-  } as Imovel,
-  {
-    id: "2",
-    empresaId: "1",
-    filialId: "1",
-    nome: "Veículo Corporativo SP",
-    tipo: "veiculo",
-    valor: 45000,
-    quantidade: 1,
-    cor: "Prata",
-    modelo: "Civic",
-    fabricante: "Honda",
-  } as Veiculo,
-  {
-    id: "3",
-    empresaId: "1",
-    filialId: "2",
-    nome: "Escritório RJ",
-    tipo: "imovel",
-    valor: 650000,
-    area: 300,
-    tipoImovel: "Comercial",
-    endereco: {
-      cep: "22070-900",
-      estado: "RJ",
-      cidade: "Rio de Janeiro",
-      bairro: "Copacabana",
-      logradouro: "Av. Atlântica",
-      numero: "500",
-      complemento: "Cobertura",
-    },
-  } as Imovel,
-  {
-    id: "4",
-    empresaId: "1",
-    filialId: "2",
-    nome: "Van de Entregas RJ",
-    tipo: "veiculo",
-    valor: 65000,
-    quantidade: 2,
-    cor: "Branco",
-    modelo: "Sprinter",
-    fabricante: "Mercedes-Benz",
-  } as Veiculo,
-  {
-    id: "5",
-    empresaId: "1",
-    filialId: "3",
-    nome: "Galpão BH",
-    tipo: "imovel",
-    valor: 320000,
-    area: 800,
-    tipoImovel: "Industrial",
-    endereco: {
-      cep: "30130-000",
-      estado: "MG",
-      cidade: "Belo Horizonte",
-      bairro: "Centro",
-      logradouro: "Av. Afonso Pena",
-      numero: "1500",
-    },
-  } as Imovel,
-  {
-    id: "6",
-    empresaId: "1",
-    filialId: "1",
-    nome: "Notebooks Dell",
-    tipo: "utilitario",
-    valor: 3500,
-    quantidade: 10,
-    descricao: "Notebooks para desenvolvimento de software com processador Intel i7, 16GB RAM e SSD 512GB",
-    funcao: "Equipamento de TI",
-  } as Utilitario,
-  {
-    id: "7",
-    empresaId: "1",
-    filialId: "4",
-    nome: "Caminhão POA",
-    tipo: "veiculo",
-    valor: 120000,
-    quantidade: 1,
-    cor: "Azul",
-    modelo: "Constellation",
-    fabricante: "Volkswagen",
-  } as Veiculo,
-  {
-    id: "8",
-    empresaId: "1",
-    filialId: "3",
-    nome: "Equipamentos de Produção",
-    tipo: "utilitario",
-    valor: 85000,
-    quantidade: 5,
-    descricao: "Máquinas industriais para produção automatizada, incluindo tornos CNC e fresadoras",
-    funcao: "Equipamento Industrial",
-  } as Utilitario,
-]
-
-const filiais = [
-  { id: "1", nome: "Matriz São Paulo" },
-  { id: "2", nome: "Filial Rio de Janeiro" },
-  { id: "3", nome: "Filial Belo Horizonte" },
-  { id: "4", nome: "Filial Porto Alegre" },
-  { id: "5", nome: "Filial Recife" },
-]
+import { useParams, useRouter } from "next/navigation"
+import api from "@/lib/api"
 
 export default function PatrimoniosGlobaisPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterTipo, setFilterTipo] = useState<string>("todos")
-  const [filterFilial, setFilterFilial] = useState<string>("todas")
+  const params = useParams();
+  const router = useRouter();
+  const empresaId = params.empresaId as string; 
+  const [patrimonios, setPatrimonios] = useState<Patrimonio[]>([]);
+  const [filiais, setFiliais] = useState<{ id: number; nome: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterTipo, setFilterTipo] = useState<string>("todos");
+  const [filterFilial, setFilterFilial] = useState<string>("todas");
 
   const patrimoniosFiltrados = useMemo(() => {
-    return patrimoniosGlobais.filter((item) => {
-      const matchesSearch = item.nome.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesTipo = filterTipo === "todos" || item.tipo === filterTipo
-      const matchesFilial = filterFilial === "todas" || item.filialId === filterFilial
-
-      return matchesSearch && matchesTipo && matchesFilial
-    })
-  }, [searchTerm, filterTipo, filterFilial])
+    return patrimonios.filter((item) => {
+      const matchesSearch = item.nome.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesTipo = filterTipo === "todos" || item.tipo === filterTipo;
+      const matchesFilial = filterFilial === "todas" || String(item.filialId) === filterFilial;
+      return matchesSearch && matchesTipo && matchesFilial;
+    });
+  }, [patrimonios, searchTerm, filterTipo, filterFilial]); 
 
   const getTipoIcon = (tipo: string) => {
     switch (tipo) {
@@ -174,6 +55,61 @@ export default function PatrimoniosGlobaisPage() {
     }
   }
 
+useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+        router.push('/');
+        return;
+    }
+
+    if (empresaId) {
+        const fetchDadosGlobais = async () => {
+            setLoading(true);
+            try {
+                const [resFiliais, resPatrimonios] = await Promise.all([
+                    api.get(`/empresas/${empresaId}/filiais/`),
+                    api.get(`/empresas/${empresaId}/patrimonios/`)
+                ]);
+
+                setFiliais(resFiliais.data);
+
+                const patrimoniosAgrupados = resPatrimonios.data;
+
+                const listaCompleta: Patrimonio[] = [];
+                Object.keys(patrimoniosAgrupados).forEach(keyFilial => {
+                  const filialData = patrimoniosAgrupados[keyFilial];
+                  const nomeDaFilial = keyFilial.split(' (ID:')[0].replace('Filial: ', '');
+                  const idDaFilial = parseInt(keyFilial.split(' (ID: ')[1].replace(')', ''));
+
+                  filialData.veiculos.forEach((p: any) => listaCompleta.push({ ...p, tipo: 'veiculo', filialId: idDaFilial, nomeFilial: nomeDaFilial }));
+                  filialData.utilitarios.forEach((p: any) => listaCompleta.push({ ...p, tipo: 'utilitario', filialId: idDaFilial, nomeFilial: nomeDaFilial }));
+                  filialData.imobiliarios.forEach((p: any) => listaCompleta.push({ ...p, tipo: 'imovel', filialId: idDaFilial, nomeFilial: nomeDaFilial }));
+                });
+
+                setPatrimonios(listaCompleta);
+
+            } catch (error) {
+                console.error("Falha ao buscar dados globais:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchDadosGlobais();
+    }
+}, [empresaId, router]);
+
+  const valorTotalFiltrado = useMemo(() => {
+    return patrimoniosFiltrados.reduce((acc, item) => {
+        const valorUnitario = parseFloat(item.valor);
+        const quantidade = parseInt(item.quantidade, 10) || 1; 
+        if (isNaN(valorUnitario)) {
+            return acc; 
+        }
+        
+        return acc + (valorUnitario * quantidade);
+    }, 0); 
+  }, [patrimoniosFiltrados]);
+
   const getTipoLabel = (tipo: string) => {
     switch (tipo) {
       case "imovel":
@@ -187,10 +123,6 @@ export default function PatrimoniosGlobaisPage() {
     }
   }
 
-  const getFilialNome = (filialId: string) => {
-    const filial = filiais.find((f) => f.id === filialId)
-    return filial ? filial.nome : "Filial não encontrada"
-  }
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -334,9 +266,9 @@ export default function PatrimoniosGlobaisPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Valor Total</p>
-                <p className="text-xl font-bold">
-                  {formatCurrency(patrimoniosFiltrados.reduce((sum, item) => sum + item.valor, 0))}
-                </p>
+                  <p className="text-xl font-bold">
+                    {formatCurrency(valorTotalFiltrado)}
+                  </p>
               </div>
               <div className="text-green-500">
                 <DollarSign className="w-8 h-8" />
@@ -398,7 +330,7 @@ export default function PatrimoniosGlobaisPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
                   <Building className="w-4 h-4 text-blue-600" />
-                  <span className="font-medium text-blue-600">{getFilialNome(item.filialId)}</span>
+                  <span className="font-medium text-blue-600">{item.nomeFilial || "Filial não identificada"}</span>
                 </div>
 
                 <div className="flex items-center gap-2 text-sm">
