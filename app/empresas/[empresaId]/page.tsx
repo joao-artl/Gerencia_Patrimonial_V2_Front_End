@@ -20,7 +20,7 @@ interface PatrimonioPorFilial {
 export default function EmpresaDashboard() {
   const params = useParams()
   const router = useRouter()
-  const empresaId = params.id as string;
+  const empresaId = params.empresaId as string;
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
@@ -58,27 +58,23 @@ export default function EmpresaDashboard() {
   }, [empresaId, router]);
 
   const metricas = useMemo(() => {
-    if (!empresa) {
+      let patrimonioTotalCalculado = 0;
+      Object.values(patrimonios).forEach((filial: any) => {
+          const todosOsItens = [...(filial.veiculos || []), ...(filial.utilitarios || []), ...(filial.imobiliarios || [])];
 
-        return {
-            totalFiliais: 0,
-            totalFuncionarios: 0,
-            patrimonioTotal: 0
-        };
-    }
+          patrimonioTotalCalculado += todosOsItens.reduce((acc, item: any) => {
+              const valor = parseFloat(item.valor) || 0; 
+              const qtd = parseInt(item.quantidade, 10) || 1;
+              return acc + (valor * qtd); 
+          }, 0);
+      });
 
-    let patrimonioTotal = 0;
-    Object.values(patrimonios).forEach((filial: any) => {
-        const todosOsItens = [...filial.veiculos, ...filial.utilitarios, ...filial.imobiliarios];
-        patrimonioTotal += todosOsItens.reduce((acc, item: any) => acc + parseFloat(item.valor), 0);
-    });
-
-    return {
-        totalFiliais: filiais.length,
-        totalFuncionarios: funcionarios.length,
-        patrimonioTotal: patrimonioTotal
-    };
-  }, [empresa, filiais, funcionarios, patrimonios]); 
+      return {
+          totalFiliais: filiais.length,
+          totalFuncionarios: funcionarios.length,
+          patrimonioTotal: patrimonioTotalCalculado
+      };
+  }, [filiais, funcionarios, patrimonios]); 
 
   const patrimonioPorCategoria = useMemo(() => {
     const categorias = {
@@ -165,19 +161,9 @@ export default function EmpresaDashboard() {
           <CardContent>
             <div className="space-y-4">
               {filiais.map((filial) => (
-                <div key={filial.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <h4 className="font-medium text-gray-900">{filial.nome}</h4>
-                    <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
-                      <Badge variant="outline" className="text-green-600 border-green-200">
-                        {filial.status}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900">{formatCurrency(filial.patrimonio)}</p>
-                    <p className="text-sm text-gray-500">patrimônio</p>
-                  </div>
+                <div key={filial.id} className="p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-gray-900">{filial.nome}</h4>
+                  <p className="text-sm text-gray-500">{filial.cnpj}</p>
                 </div>
               ))}
             </div>
