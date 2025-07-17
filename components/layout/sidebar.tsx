@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Building2, Search, Menu, X, Home, Building, ArrowLeft, LogOut, User, UserCheck, Users } from "lucide-react"
 import type { Usuario } from "@/types"
+import api from "@/lib/api";
 
 const navigation = [
   {
@@ -31,42 +32,52 @@ const navigation = [
   },
 ]
 
-// Dados mockados das empresas
-const empresas = [
-  { id: "1", nome: "TechCorp Ltda.", cnpj: "12.345.678/0001-90" },
-  { id: "2", nome: "InnovaTech S.A.", cnpj: "98.765.432/0001-10" },
-  { id: "3", nome: "Digital Solutions Ltda.", cnpj: "11.222.333/0001-44" },
-]
-
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false)
-  const [usuario, setUsuario] = useState<Usuario | null>(null)
-  const pathname = usePathname()
-  const params = useParams()
-  const router = useRouter()
-  const empresaId = params.empresaId as string
+    const [usuario, setUsuario] = useState<Usuario | null>(null);
+    const [empresa, setEmpresa] = useState<{ id: number; nome: string; cnpj: string } | null>(null);
+    const pathname = usePathname();
+    const params = useParams();
+    const router = useRouter();
+    const empresaId = (params.id || params.empresaId) as string;
 
-  const empresa = empresas.find((e) => e.id === empresaId)
+    useEffect(() => {
+      const userDataString = localStorage.getItem('userData');
+      if (userDataString) {
+        setUsuario(JSON.parse(userDataString));
+      } else {
+        router.push('/'); 
+      }
+    }, [router]); 
 
-  useEffect(() => {
-    const usuarioData = localStorage.getItem("usuario")
-    if (usuarioData) {
-      setUsuario(JSON.parse(usuarioData))
-    }
-  }, [])
+    useEffect(() => {
+      if (empresaId) {
+        const fetchEmpresa = async () => {
+          try {
+            const response = await api.get(`/empresas/${empresaId}/`);
+            setEmpresa(response.data);
+          } catch (error) {
+            console.error("Erro ao buscar dados da empresa para a sidebar:", error);
+            setEmpresa(null); 
+          }
+        };
+        fetchEmpresa();
+      }
+    }, [empresaId]); 
 
   const handleLogout = () => {
-    localStorage.removeItem("usuario")
-    router.push("/")
-  }
+      localStorage.clear();
+      router.push("/");
+  };
 
-  const getTipoUsuarioLabel = (tipo: string) => {
-    return tipo === "gestor" ? "Gestor" : "Funcionário"
-  }
+const getTipoUsuarioLabel = (tipo: string) => {
 
-  const getTipoUsuarioIcon = (tipo: string) => {
-    return tipo === "gestor" ? <UserCheck className="w-4 h-4" /> : <User className="w-4 h-4" />
-  }
+    return tipo === "GESTOR" ? "Gestor" : "Funcionário";
+};
+
+const getTipoUsuarioIcon = (tipo: string) => {
+    return tipo === "GESTOR" ? <UserCheck className="w-4 h-4" /> : <User className="w-4 h-4" />;
+};
 
   return (
     <>
@@ -98,10 +109,10 @@ export function Sidebar() {
           {usuario && (
             <div className="p-4 border-b border-gray-200 bg-gray-50">
               <div className="flex items-center gap-2 mb-2">
-                {getTipoUsuarioIcon(usuario.tipoUsuario)}
+                {getTipoUsuarioIcon(usuario.tipo_usuario)}
                 <div>
                   <p className="text-sm font-medium text-gray-900">{usuario.nome}</p>
-                  <p className="text-xs text-gray-600">{getTipoUsuarioLabel(usuario.tipoUsuario)}</p>
+                  <p className="text-xs text-gray-600">{getTipoUsuarioLabel(usuario.tipo_usuario)}</p>
                 </div>
               </div>
               <p className="text-xs text-gray-600">{usuario.email}</p>

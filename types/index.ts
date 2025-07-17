@@ -50,7 +50,7 @@ export interface Usuario {
   cpf: string
   nome: string
   email: string
-  tipoUsuario: "gestor" | "funcionario"
+  tipo_usuario: "GESTOR" | "FUNCIONARIO"
   filialId?: string
   empresaId?: string
   senha: string
