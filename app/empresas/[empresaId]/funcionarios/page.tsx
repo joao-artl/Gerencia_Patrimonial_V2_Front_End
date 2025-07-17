@@ -45,22 +45,22 @@ export default function FuncionariosPage() {
     senha_da_filial: "", 
   })
 
-  const fetchData = useCallback(async () => {
-      if (!empresaId) return;
-      setLoading(true);
-      try {
-          const [resFuncionarios, resFiliais] = await Promise.all([
-              api.get(`/empresas/${empresaId}/funcionarios/`),
-              api.get(`/empresas/${empresaId}/filiais/`)
-          ]);
-          setFuncionarios(resFuncionarios.data);
-          setFiliais(resFiliais.data);
-      } catch (err) {
-          console.error("Falha ao buscar dados:", err);
-      } finally {
-          setLoading(false);
-      }
-  }, [empresaId]);
+const fetchData = useCallback(async () => {
+    if (!empresaId) return;
+    setLoading(true);
+    try {
+        const [resFuncionarios, resFiliais] = await Promise.all([
+            api.get(`/empresas/${empresaId}/funcionarios/`),
+            api.get(`/empresas/${empresaId}/filiais/`)
+        ]);
+        setFuncionarios(resFuncionarios.data);
+        setFiliais(resFiliais.data);
+    } catch (err) {
+        console.error("Falha ao buscar dados:", err);
+    } finally {
+        setLoading(false);
+    }
+}, [empresaId]);
 
 useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -75,16 +75,16 @@ useEffect(() => {
         funcionario.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         funcionario.cpf.includes(searchTerm)
 
-      const matchesFilial = filterFilial === "todas" || funcionario.filialId === filterFilial
+      const matchesFilial = filterFilial === "todas" || String(funcionario.filial_associada) === filterFilial
 
       return matchesSearch && matchesFilial
     })
   }, [funcionarios, searchTerm, filterFilial])
 
-  const getFilialNome = (filialId: string) => {
-    const filial = filiais.find((f) => f.id === filialId)
-    return filial ? filial.nome : "Filial não encontrada"
-  }
+  const getFilialNome = (filialId: number) => { 
+      const filial = filiais.find((f) => f.id === filialId);
+      return filial ? filial.nome : "Filial não encontrada";
+  };
 
   const formatCPF = (value: string) => {
     const numbers = value.replace(/\D/g, "")
@@ -225,7 +225,7 @@ useEffect(() => {
               <SelectContent>
                 <SelectItem value="todas">Todas as filiais</SelectItem>
                 {filiais.map((filial) => (
-                  <SelectItem key={filial.id} value={filial.id}>
+                  <SelectItem key={filial.id} value={String(filial.id)}>
                     {filial.nome}
                   </SelectItem>
                 ))}
@@ -329,7 +329,7 @@ useEffect(() => {
                         </SelectTrigger>
                         <SelectContent>
                           {filiais.map((filial) => (
-                            <SelectItem key={filial.id} value={filial.id}>
+                            <SelectItem key={filial.id} value={String(filial.id)}>
                               {filial.nome}
                             </SelectItem>
                           ))}
@@ -432,7 +432,7 @@ useEffect(() => {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Building className="w-4 h-4" />
-                  <span>{getFilialNome(funcionario.filialId)}</span>
+                  <span>{getFilialNome(funcionario.filial_associada)}</span>
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-gray-600">
