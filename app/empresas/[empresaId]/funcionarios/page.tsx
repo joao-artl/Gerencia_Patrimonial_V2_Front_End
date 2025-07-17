@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -22,86 +22,51 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Building, Search, Plus, Edit, Trash2, Mail, User, Users, CreditCard, Lock, Eye, EyeOff } from "lucide-react"
 import type { Funcionario } from "@/types"
-
-const funcionariosIniciais: Funcionario[] = [
-  {
-    id: "1",
-    empresaId: "1",
-    filialId: "1",
-    nome: "João Silva",
-    cpf: "123.456.789-00",
-    email: "joao.silva@techcorp.com.br",
-    senha: "123456",
-  },
-  {
-    id: "2",
-    empresaId: "1",
-    filialId: "1",
-    nome: "Maria Santos",
-    cpf: "987.654.321-00",
-    email: "maria.santos@techcorp.com.br",
-    senha: "123456",
-  },
-  {
-    id: "3",
-    empresaId: "1",
-    filialId: "2",
-    nome: "Carlos Oliveira",
-    cpf: "456.789.123-00",
-    email: "carlos.oliveira@techcorp.com.br",
-    senha: "123456",
-  },
-  {
-    id: "4",
-    empresaId: "1",
-    filialId: "2",
-    nome: "Ana Costa",
-    cpf: "789.123.456-00",
-    email: "ana.costa@techcorp.com.br",
-    senha: "123456",
-  },
-  {
-    id: "5",
-    empresaId: "1",
-    filialId: "3",
-    nome: "Pedro Lima",
-    cpf: "321.654.987-00",
-    email: "pedro.lima@techcorp.com.br",
-    senha: "123456",
-  },
-  {
-    id: "6",
-    empresaId: "1",
-    filialId: "1",
-    nome: "Fernanda Costa",
-    cpf: "654.321.987-00",
-    email: "fernanda.costa@techcorp.com.br",
-    senha: "123456",
-  },
-]
-
-const filiais = [
-  { id: "1", nome: "Matriz São Paulo" },
-  { id: "2", nome: "Filial Rio de Janeiro" },
-  { id: "3", nome: "Filial Belo Horizonte" },
-  { id: "4", nome: "Filial Porto Alegre" },
-  { id: "5", nome: "Filial Recife" },
-]
+import api from "@/lib/api";
 
 export default function FuncionariosPage() {
-  const [funcionarios, setFuncionarios] = useState<Funcionario[]>(funcionariosIniciais)
+  const params = useParams();
+  const router = useRouter();
+  const empresaId = params.empresaId as string; 
+  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
+  const [filiais, setFiliais] = useState<{ id: number; nome: string }[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("")
   const [filterFilial, setFilterFilial] = useState<string>("todas")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<Funcionario | null>(null)
   const [showPassword, setShowPassword] = useState(false)
-  const [formData, setFormData] = useState<Partial<Funcionario>>({
+  const [formData, setFormData] = useState<Partial<Funcionario> & { senha_da_filial?: string }>({
     nome: "",
     cpf: "",
     email: "",
     senha: "",
     filialId: "",
+    senha_da_filial: "", 
   })
+
+  const fetchData = useCallback(async () => {
+      if (!empresaId) return;
+      setLoading(true);
+      try {
+          const [resFuncionarios, resFiliais] = await Promise.all([
+              api.get(`/empresas/${empresaId}/funcionarios/`),
+              api.get(`/empresas/${empresaId}/filiais/`)
+          ]);
+          setFuncionarios(resFuncionarios.data);
+          setFiliais(resFiliais.data);
+      } catch (err) {
+          console.error("Falha ao buscar dados:", err);
+      } finally {
+          setLoading(false);
+      }
+  }, [empresaId]);
+
+useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) router.push('/');
+    else fetchData();
+}, [fetchData, router]);
 
   const funcionariosFiltrados = useMemo(() => {
     return funcionarios.filter((funcionario) => {
@@ -122,10 +87,8 @@ export default function FuncionariosPage() {
   }
 
   const formatCPF = (value: string) => {
-    // Remove tudo que não é dígito
     const numbers = value.replace(/\D/g, "")
 
-    // Aplica a máscara
     if (numbers.length <= 11) {
       return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
     }
@@ -139,88 +102,99 @@ export default function FuncionariosPage() {
   }
 
   const validateCPF = (cpf: string) => {
-    // Remove pontos e traços
     const numbers = cpf.replace(/\D/g, "")
-
-    // Verifica se tem 11 dígitos
     if (numbers.length !== 11) return false
-
-    // Verifica se todos os dígitos são iguais
     if (/^(\d)\1{10}$/.test(numbers)) return false
 
     return true
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!validateCPF(formData.cpf || "")) { /* ... */ return; }
+      if (!editingItem && (!formData.senha || formData.senha.length < 6)) {
+          alert("Na criação, a senha é obrigatória e deve ter pelo menos 6 caracteres.");
+          return;
+      }
+      if (editingItem && formData.senha && formData.senha.length < 6) {
+          alert("A nova senha deve ter pelo menos 6 caracteres.");
+          return;
+      }
+      if (!formData.filialId) { /* ... */ return; }
 
-    // Validações
-    if (!validateCPF(formData.cpf || "")) {
-      alert("CPF inválido. Digite um CPF válido com 11 dígitos.")
-      return
-    }
+      setLoading(true);
 
-    if (!formData.senha || formData.senha.length < 6) {
-      alert("A senha deve ter pelo menos 6 caracteres.")
-      return
-    }
+      try {
+          const payload: Partial<Funcionario> & { tipo_usuario?: string, filial_associada?: string, senha_da_filial?: string } = {
+              nome: formData.nome,
+              cpf: formData.cpf?.replace(/\D/g, ''),
+              email: formData.email,
+              tipo_usuario: "FUNCIONARIO",
+              filial_associada: formData.filialId,
+          };
 
-    if (!formData.filialId) {
-      alert("Selecione uma filial para o funcionário.")
-      return
-    }
+          if (formData.senha) {
+              payload.senha = formData.senha;
+          }
 
-    // Verificar se CPF já existe (exceto para edição do mesmo funcionário)
-    if (funcionarios.some((f) => f.cpf === formData.cpf && f.id !== editingItem?.id)) {
-      alert("Este CPF já está cadastrado.")
-      return
-    }
+          if (editingItem) {
+              await api.patch(`/usuarios/${editingItem.id}/`, payload);
+          } else {
+              payload.senha_da_filial = formData.senha_da_filial; 
+              await api.post('/usuarios/', payload);
+          }
+          
+          resetForm();
+          setTimeout(fetchData, 300); 
 
-    // Verificar se email já existe (exceto para edição do mesmo funcionário)
-    if (funcionarios.some((f) => f.email === formData.email && f.id !== editingItem?.id)) {
-      alert("Este email já está cadastrado.")
-      return
-    }
-
-    if (editingItem) {
-      setFuncionarios((prev) =>
-        prev.map((item) => (item.id === editingItem.id ? ({ ...item, ...formData } as Funcionario) : item)),
-      )
-    } else {
-      const novoFuncionario: Funcionario = {
-        id: Date.now().toString(),
-        empresaId: "1",
-        ...formData,
-      } as Funcionario
-
-      setFuncionarios((prev) => [...prev, novoFuncionario])
-    }
-
-    resetForm()
-  }
+      } catch (err: any) {
+          console.error("Erro ao salvar funcionário:", err.response?.data);
+          const apiError = err.response?.data;
+          const errorMessage = apiError ? Object.values(apiError).flat().join(' ') : "Falha ao salvar. Tente novamente.";
+          alert(errorMessage);
+      } finally {
+          setLoading(false);
+      }
+  };
 
   const handleEdit = (item: Funcionario) => {
-    setEditingItem(item)
-    setFormData(item)
-    setIsDialogOpen(true)
-  }
+      setEditingItem(item); 
+      setFormData({ 
+          nome: item.nome,
+          cpf: item.cpf,
+          email: item.email,
+          filialId: item.filialId,
+          senha: "" 
+      });
 
-  const handleDelete = (id: string) => {
-    setFuncionarios((prev) => prev.filter((item) => item.id !== id))
-  }
+      setIsDialogOpen(true);
+  };
+
+  const handleDelete = async (id: number) => { 
+      setLoading(true);
+      try {
+          await api.delete(`/usuarios/${id}/`);
+          setTimeout(fetchData, 300); 
+      } catch (err) {
+          console.error("Erro ao excluir funcionário:", err);
+      } finally {
+          setLoading(false);
+      }
+  };
 
   const resetForm = () => {
-    setFormData({
-      nome: "",
-      cpf: "",
-      email: "",
-      senha: "",
-      filialId: "",
-    })
-    setEditingItem(null)
-    setIsDialogOpen(false)
-    setShowPassword(false)
-  }
+      setFormData({
+        nome: "",
+        cpf: "",
+        email: "",
+        senha: "",
+        filialId: "",
+        senha_da_filial: "", 
+      });
+      setEditingItem(null);
+      setIsDialogOpen(false);
+      setShowPassword(false);
+  };
 
   return (
     <div className="p-6 lg:p-8">
@@ -365,6 +339,25 @@ export default function FuncionariosPage() {
                   </div>
                 </div>
 
+                <div className="md:col-span-2">
+                  <Label htmlFor="senha_filial">Senha da Filial *</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      id="senha_filial"
+                      type="password"
+                      value={formData.senha_da_filial}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, senha_da_filial: e.target.value }))}
+                      className="pl-10"
+                      placeholder="Senha da filial selecionada"
+                      required={!editingItem} 
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Necessária para confirmar a autorização de cadastro nesta filial.
+                  </p>
+                </div>
+
                 <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={resetForm}>
                     Cancelar
@@ -449,7 +442,7 @@ export default function FuncionariosPage() {
 
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Lock className="w-4 h-4" />
-                  <span>Senha: {"*".repeat(funcionario.senha.length)}</span>
+                  <span>Senha: ********</span>
                 </div>
               </div>
             </CardContent>
