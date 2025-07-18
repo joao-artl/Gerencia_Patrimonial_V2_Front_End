@@ -125,7 +125,7 @@ const getTipoUsuarioIcon = (tipo: string) => {
             <Link href="/dashboard">
               <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Voltar para Dashboard
+                Voltar para Empresas
               </Button>
             </Link>
           </div>

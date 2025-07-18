@@ -168,8 +168,12 @@ export default function DashboardPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     const dadosParaEnviar: Partial<Empresa> = { ...formData };
+    
+    if (dadosParaEnviar.endereco?.cep) {
+    dadosParaEnviar.endereco.cep = dadosParaEnviar.endereco.cep.replace(/\D/g, "");
+    }
+    
     if (!dadosParaEnviar.senha) { 
       delete dadosParaEnviar.senha;
     }
