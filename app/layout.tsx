@@ -6,7 +6,7 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "PatrimônioTech - Gestão Empresarial",
+  title: "Gerência Patrimonial - Gestão de Empresa e Filiais",
   description: "Sistema completo de gestão de patrimônio empresarial",
     generator: 'v0.dev'
 }

@@ -350,8 +350,8 @@ const handleConnectToCompany = async (e: React.FormEvent) => {
             <div className="flex items-center gap-3">
               <Building2 className="w-8 h-8 text-blue-600" />
               <div>
-                <h1 className="text-xl font-bold text-gray-900">PatrimônioTech</h1>
-                <p className="text-sm text-gray-500">Gestão Empresarial</p>
+                <h1 className="text-xl font-bold text-gray-900">Gerência Patrimonial</h1>
+                <p className="text-sm text-gray-500">Gestão de Empresa e Filiais</p>
               </div>
             </div>
 

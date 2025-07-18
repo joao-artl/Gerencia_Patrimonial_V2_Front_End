@@ -545,8 +545,8 @@ export default function FuncionarioPage() {
             <div className="flex items-center gap-3">
               <Building2 className="w-8 h-8 text-blue-600" />
               <div>
-                <h1 className="text-xl font-bold text-gray-900">PatrimônioTech</h1>
-                <p className="text-sm text-gray-500">Gestão de Patrimônio</p>
+                <h1 className="text-xl font-bold text-gray-900">Gestão de Empresa e Filiais</h1>
+                <p className="text-sm text-gray-500">Gestão de Empresa e Filiais</p>
               </div>
             </div>
 

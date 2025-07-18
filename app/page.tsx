@@ -195,8 +195,8 @@ const handleLogin = async (e: React.FormEvent) => {
               <Building2 className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">PatrimônioTech</h1>
-              <p className="text-sm text-gray-600">Gestão Empresarial</p>
+              <h1 className="text-2xl font-bold text-gray-900">Gerência Patrimonial</h1>
+              <p className="text-sm text-gray-600">Gestão de Empresa e Filiais</p>
             </div>
           </div>
           <p className="text-gray-600">Acesse sua conta ou crie uma nova para gerenciar seu patrimônio</p>
@@ -413,7 +413,7 @@ const handleLogin = async (e: React.FormEvent) => {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-gray-500">
-          <p>© 2024 PatrimônioTech. Todos os direitos reservados.</p>
+          <p>© 2025 João Artur Leles. Todos os direitos reservados.</p>
         </div>
       </div>
     </div>
