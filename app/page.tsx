@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react" 
+import { useState, useEffect, useRef } from "react" 
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Building2, Mail, Lock, User, Eye, EyeOff, CreditCard } from "lucide-react"
-import api from "@/lib/api";
+import api, { apiSemToken } from "@/lib/api";
 
 interface Usuario {
   id: string
@@ -33,6 +33,8 @@ export default function AuthPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [loading, setLoading] = useState(false)
+  const [tabValue, setTabValue] = useState("login");
+  const tabRef = useRef<any>(null);
 
   // Estados do formulário de login
   const [loginData, setLoginData] = useState({
@@ -63,7 +65,7 @@ const handleLogin = async (e: React.FormEvent) => {
     setSuccess("");
 
     try {
-        const response = await api.post('/token/', {
+        const response = await apiSemToken.post('/token/', {
             email: loginData.email,
             senha: loginData.senha,
         });
@@ -153,10 +155,12 @@ const handleLogin = async (e: React.FormEvent) => {
             tipo_usuario: "GESTOR",
         };
 
-        await api.post('/usuarios/', payload);
+        await apiSemToken.post('/usuarios/', payload);
 
         setSuccess("Conta criada com sucesso! Por favor, use a aba 'Entrar' para fazer o login.");
         resetForms();
+        setTabValue("login"); 
+
 
     } catch (err: any) {
         if (err.response && err.response.data) {
@@ -207,7 +211,10 @@ const handleLogin = async (e: React.FormEvent) => {
             <CardTitle className="text-center text-xl">Bem-vindo</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="login" onValueChange={resetForms}>
+            <Tabs value={tabValue} onValueChange={(val) => {
+              resetForms();
+              setTabValue(val); 
+            }}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Entrar</TabsTrigger>
                 <TabsTrigger value="cadastro">Criar Conta</TabsTrigger>
