@@ -37,7 +37,7 @@ export default function PatrimoniosGlobaisPage() {
     return patrimonios.filter((item) => {
       const matchesSearch = item.nome.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesTipo = filterTipo === "todos" || item.tipo === filterTipo;
-      const matchesFilial = filterFilial === "todas" || String(item.filialId) === filterFilial;
+      const matchesFilial = filterFilial === "todas" || item.filialId === Number(filterFilial);
       return matchesSearch && matchesTipo && matchesFilial;
     });
   }, [patrimonios, searchTerm, filterTipo, filterFilial]); 
@@ -223,7 +223,7 @@ useEffect(() => {
               <SelectContent>
                 <SelectItem value="todas">Todas as filiais</SelectItem>
                 {filiais.map((filial) => (
-                  <SelectItem key={filial.id} value={filial.id}>
+                  <SelectItem key={filial.id} value={String(filial.id)}>
                     {filial.nome}
                   </SelectItem>
                 ))}
