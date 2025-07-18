@@ -279,25 +279,6 @@ const handleLogin = async (e: React.FormEvent) => {
                     {loading ? "Entrando..." : "Entrar"}
                   </Button>
                 </form>
-
-                {/* Dados de demonstração */}
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Contas de demonstração:</p>
-                  <div className="space-y-1 text-xs text-gray-600">
-                    <p>
-                      👨‍💼 <strong>Gestor:</strong> joao@techcorp.com.br | 🔑 123456
-                    </p>
-                    <p>
-                      👩‍💼 <strong>Gestor:</strong> maria@innovatech.com.br | 🔑 123456
-                    </p>
-                    <p>
-                      👤 <strong>Funcionário:</strong> carlos@techcorp.com.br | 🔑 123456
-                    </p>
-                    <p>
-                      👤 <strong>Funcionário:</strong> ana@innovatech.com.br | 🔑 123456
-                    </p>
-                  </div>
-                </div>
               </TabsContent>
 
               {/* Tab de Cadastro */}
