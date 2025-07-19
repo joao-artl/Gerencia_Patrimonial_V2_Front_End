@@ -275,7 +275,7 @@ const handleLogin = async (e: React.FormEvent) => {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button id="login-submit-button" type="submit" className="w-full" disabled={loading}>
                     {loading ? "Entrando..." : "Entrar"}
                   </Button>
                 </form>
@@ -380,7 +380,7 @@ const handleLogin = async (e: React.FormEvent) => {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button id="cadastro-submit-button" type="submit" className="w-full" disabled={loading}>
                     {loading ? "Criando conta..." : "Criar Conta"}
                   </Button>
                 </form>

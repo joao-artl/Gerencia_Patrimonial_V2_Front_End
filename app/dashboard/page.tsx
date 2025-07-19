@@ -551,7 +551,7 @@ const handleConnectToCompany = async (e: React.FormEvent) => {
               {/* Criar/Editar Empresa */}
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button onClick={() => resetForm()}>
+                  <Button id="nova-empresa-button" onClick={() => resetForm()}>
                     <Plus className="w-4 h-4 mr-2" />
                     Nova Empresa
                   </Button>
@@ -765,7 +765,7 @@ const handleConnectToCompany = async (e: React.FormEvent) => {
                       <Button type="button" variant="outline" onClick={resetForm}>
                         Cancelar
                       </Button>
-                      <Button type="submit">{editingItem ? "Atualizar" : "Criar Empresa"}</Button>
+                      <Button id="salvar-empresa-button" type="submit">{editingItem ? "Atualizar" : "Criar Empresa"}</Button>
                     </div>
                   </form>
                 </DialogContent>
@@ -857,7 +857,7 @@ const handleConnectToCompany = async (e: React.FormEvent) => {
 
                 <div className="pt-4 border-t border-gray-100">
                   <Link href={`/empresas/${empresa.id}`}>
-                    <Button className="w-full" size="sm">
+                    <Button id={`acessar-empresa-${empresa.id}`} className="w-full" size="sm">
                       <Eye className="w-4 h-4 mr-2" />
                       Acessar Empresa
                     </Button>

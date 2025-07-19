@@ -235,7 +235,7 @@ useEffect(() => {
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => resetForm()}>
+              <Button id="novo-funcionario-button" onClick={() => resetForm()}>
                 <Plus className="w-4 h-4 mr-2" />
                 Novo Funcionário
               </Button>
@@ -324,7 +324,7 @@ useEffect(() => {
                         value={formData.filialId}
                         onValueChange={(value) => setFormData((prev) => ({ ...prev, filialId: value }))}
                       >
-                        <SelectTrigger className="pl-10">
+                        <SelectTrigger id="filial-select-trigger" className="pl-10">
                           <SelectValue placeholder="Selecione uma filial" />
                         </SelectTrigger>
                         <SelectContent>
@@ -362,7 +362,7 @@ useEffect(() => {
                   <Button type="button" variant="outline" onClick={resetForm}>
                     Cancelar
                   </Button>
-                  <Button type="submit">{editingItem ? "Atualizar" : "Cadastrar"}</Button>
+                  <Button id="cadastrar-funcionario-button" type="submit">{editingItem ? "Atualizar" : "Cadastrar"}</Button>
                 </div>
               </form>
             </DialogContent>

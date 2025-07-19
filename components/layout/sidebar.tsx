@@ -139,6 +139,7 @@ const getTipoUsuarioIcon = (tipo: string) => {
                 <Link
                   key={item.name}
                   href={href}
+                  id={item.name === "Funcionários" ? "sidebar-link-funcionarios" : undefined}
                   onClick={() => setIsOpen(false)}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",

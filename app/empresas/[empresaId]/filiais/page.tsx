@@ -265,7 +265,7 @@ const handleDelete = async (id: number) => {
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => resetForm()}>
+              <Button id="nova-filial-button" onClick={() => resetForm()}>
                 <Plus className="w-4 h-4 mr-2" />
                 Nova Filial
               </Button>
@@ -483,7 +483,7 @@ const handleDelete = async (id: number) => {
                   <Button type="button" variant="outline" onClick={resetForm}>
                     Cancelar
                   </Button>
-                  <Button type="submit">{editingItem ? "Atualizar" : "Criar Filial"}</Button>
+                  <Button id="salvar-filial-button" type="submit">{editingItem ? "Atualizar" : "Criar Filial"}</Button>
                 </div>
               </form>
             </DialogContent>
