@@ -10,7 +10,7 @@ import time
 import random
 import json
 
-URL_FRONTEND = "http://localhost:3000/"
+URL_FRONTEND = "https://gerencia-patrimonial.vercel.app/"
 RUN_ID = random.randint(10000, 99999)
 DATA_FILE = "created_data.json"
 
@@ -156,7 +156,7 @@ def test_fluxo_completo_do_gestor(driver):
             driver.execute_script("arguments[0].click();", filiais_link_element)
 
         print("\n[FLUXO] Etapa 6: Criando uma nova Filial...")
-        time.sleep(10)
+        time.sleep(6)
         WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.ID, "nova-filial-button"))
         ).click()
