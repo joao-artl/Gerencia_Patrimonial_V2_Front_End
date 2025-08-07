@@ -111,7 +111,7 @@ useEffect(() => {
 
   const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!validateCPF(formData.cpf || "")) { /* ... */ return; }
+      if (!validateCPF(formData.cpf || "")) { alert("CPF inválido."); return; }
       if (!editingItem && (!formData.senha || formData.senha.length < 6)) {
           alert("Na criação, a senha é obrigatória e deve ter pelo menos 6 caracteres.");
           return;
@@ -120,18 +120,26 @@ useEffect(() => {
           alert("A nova senha deve ter pelo menos 6 caracteres.");
           return;
       }
-      if (!formData.filialId) { /* ... */ return; }
+      if (!formData.filialId) { alert("Selecione uma filial."); return; }
+      if (!formData.senha_da_filial) {
+          alert("A senha da filial é obrigatória para salvar as alterações.");
+          return;
+      }
 
       setLoading(true);
 
       try {
-          const payload: Partial<Funcionario> & { tipo_usuario?: string, filial_associada?: string, senha_da_filial?: string } = {
+          const payload: any = {
               nome: formData.nome,
-              cpf: formData.cpf?.replace(/\D/g, ''),
               email: formData.email,
-              tipo_usuario: "FUNCIONARIO",
               filial_associada: formData.filialId,
+              senha_da_filial: formData.senha_da_filial,
           };
+
+          if (!editingItem) {
+              payload.cpf = formData.cpf?.replace(/\D/g, '');
+              payload.tipo_usuario = "FUNCIONARIO";
+          }
 
           if (formData.senha) {
               payload.senha = formData.senha;
@@ -140,12 +148,11 @@ useEffect(() => {
           if (editingItem) {
               await api.patch(`/usuarios/${editingItem.id}/`, payload);
           } else {
-              payload.senha_da_filial = formData.senha_da_filial; 
               await api.post('/usuarios/', payload);
           }
-          
+
           resetForm();
-          setTimeout(fetchData, 300); 
+          setTimeout(fetchData, 300);
 
       } catch (err: any) {
           console.error("Erro ao salvar funcionário:", err.response?.data);
@@ -157,13 +164,13 @@ useEffect(() => {
       }
   };
 
-  const handleEdit = (item: Funcionario) => {
+const handleEdit = (item: Funcionario) => {
       setEditingItem(item); 
       setFormData({ 
           nome: item.nome,
           cpf: item.cpf,
           email: item.email,
-          filialId: item.filialId,
+          filialId: String(item.filial_associada),
           senha: "" 
       });
 
@@ -349,12 +356,12 @@ useEffect(() => {
                       value={formData.senha_da_filial}
                       onChange={(e) => setFormData((prev) => ({ ...prev, senha_da_filial: e.target.value }))}
                       className="pl-10"
-                      placeholder="Senha da filial selecionada"
-                      required={!editingItem} 
+                      placeholder="Senha para confirmar a operação"
+                      required
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Necessária para confirmar a autorização de cadastro nesta filial.
+                    Necessária para confirmar a criação ou alteração do funcionário nesta filial.
                   </p>
                 </div>
 
