@@ -83,14 +83,11 @@ const estados = [
   "TO",
 ]
 
-
-
-
 export default function PatrimoniosFilialPage() {
   const params = useParams();
   const router = useRouter();
   const empresaId = params.empresaId as string;
-  const filialId = params.id as string;
+  const filialId = params.filialId as string;
   const [filial, setFilial] = useState<{ nome: string } | null>(null);
   const [patrimonios, setPatrimonios] = useState<any[]>([]); 
   const [loading, setLoading] = useState(true);

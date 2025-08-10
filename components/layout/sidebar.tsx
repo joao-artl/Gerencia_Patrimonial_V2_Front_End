@@ -39,7 +39,7 @@ export function Sidebar() {
     const pathname = usePathname();
     const params = useParams();
     const router = useRouter();
-    const empresaId = (params.id || params.empresaId) as string;
+    const empresaId = params.empresaId as string;
 
     useEffect(() => {
       const userDataString = localStorage.getItem('userData');
