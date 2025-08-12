@@ -36,6 +36,16 @@ export default function AuthPage() {
   const [tabValue, setTabValue] = useState("login");
   const tabRef = useRef<any>(null);
 
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        setSuccess("");
+        setError("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error]);
+
   // Estados do formulário de login
   const [loginData, setLoginData] = useState({
     email: "",
@@ -185,8 +195,6 @@ const handleLogin = async (e: React.FormEvent) => {
       senha: "",
       confirmarSenha: "",
     })
-    setError("")
-    setSuccess("")
   }
 
   return (
