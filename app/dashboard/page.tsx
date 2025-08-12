@@ -174,13 +174,59 @@ export default function DashboardPage() {
     return value
   }
 
+  const formatCNPJ = (value: string): string => {
+    const cnpj = value.replace(/\D/g, "").substring(0, 14);
+
+    if (!cnpj.length) {
+      return "";
+    }
+    if (cnpj.length <= 2) {
+      return cnpj;
+    }
+    if (cnpj.length <= 5) {
+      return `${cnpj.slice(0, 2)}.${cnpj.slice(2)}`;
+    }
+    if (cnpj.length <= 8) {
+      return `${cnpj.slice(0, 2)}.${cnpj.slice(2, 5)}.${cnpj.slice(5)}`;
+    }
+    if (cnpj.length <= 12) {
+      return `${cnpj.slice(0, 2)}.${cnpj.slice(2, 5)}.${cnpj.slice(5, 8)}/${cnpj.slice(8)}`;
+    }
+    return `${cnpj.slice(0, 2)}.${cnpj.slice(2, 5)}.${cnpj.slice(5, 8)}/${cnpj.slice(8, 12)}-${cnpj.slice(12, 14)}`;
+  };
+
+  const formatTelefone = (value: string): string => {
+    const phone = value.replace(/\D/g, "").substring(0, 11);
+
+    if (!phone.length) {
+      return "";
+    }
+    if (phone.length <= 2) {
+      return `(${phone}`;
+    }
+    if (phone.length <= 6) {
+      return `(${phone.slice(0, 2)}) ${phone.slice(2)}`;
+    }
+    if (phone.length <= 10) {
+      return `(${phone.slice(0, 2)}) ${phone.slice(2, 6)}-${phone.slice(6)}`;
+    }
+    return `(${phone.slice(0, 2)}) ${phone.slice(2, 7)}-${phone.slice(7, 11)}`;
+  };
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     const dadosParaEnviar: Partial<Empresa> = { ...formData };
     
+    if (dadosParaEnviar.cnpj) {
+      dadosParaEnviar.cnpj = dadosParaEnviar.cnpj.replace(/\D/g, "");
+    }
+    if (dadosParaEnviar.telefone) {
+      dadosParaEnviar.telefone = dadosParaEnviar.telefone.replace(/\D/g, "");
+    }
     if (dadosParaEnviar.endereco?.cep) {
-    dadosParaEnviar.endereco.cep = dadosParaEnviar.endereco.cep.replace(/\D/g, "");
+      dadosParaEnviar.endereco.cep = dadosParaEnviar.endereco.cep.replace(/\D/g, "");
     }
     
     if (!dadosParaEnviar.senha) { 
@@ -320,10 +366,6 @@ const handleConnectToCompany = async (e: React.FormEvent) => {
     setAddGestorData({ empresaId: "", empresaSenha: "", gestorEmail: "" })
     setIsAddGestorDialogOpen(false)
     setError("")
-  }
-
-  const formatCNPJ = (cnpj: string) => {
-    return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")
   }
 
   const getEnderecoCompleto = (endereco: Empresa["endereco"]) => {
@@ -581,13 +623,17 @@ const handleConnectToCompany = async (e: React.FormEvent) => {
 
                       <div>
                         <Label htmlFor="cnpj">CNPJ *</Label>
-                        <Input
-                          id="cnpj"
-                          value={formData.cnpj}
-                          onChange={(e) => setFormData((prev) => ({ ...prev, cnpj: e.target.value }))}
-                          placeholder="00.000.000/0000-00"
-                          required
-                        />
+                          <Input
+                            id="cnpj"
+                            value={formData.cnpj || ''}
+                            onChange={(e) => {
+                              const formatted = formatCNPJ(e.target.value);
+                              setFormData((prev) => ({ ...prev, cnpj: formatted }));
+                            }}
+                            placeholder="00.000.000/0000-00"
+                            maxLength={18} // 14 números + 4 caracteres de formatação
+                            required
+                          />
                       </div>
 
                       <div>
@@ -609,13 +655,18 @@ const handleConnectToCompany = async (e: React.FormEvent) => {
                         <Label htmlFor="telefone">Telefone *</Label>
                         <div className="relative">
                           <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                          <Input
-                            id="telefone"
-                            value={formData.telefone}
-                            onChange={(e) => setFormData((prev) => ({ ...prev, telefone: e.target.value }))}
-                            className="pl-10"
-                            required
-                          />
+                            <Input
+                              id="telefone"
+                              value={formData.telefone || ''}
+                              onChange={(e) => {
+                                const formatted = formatTelefone(e.target.value);
+                                setFormData((prev) => ({ ...prev, telefone: formatted }));
+                              }}
+                              className="pl-10"
+                              placeholder="(99) 99999-9999"
+                              maxLength={15}
+                              required
+                            />
                         </div>
                       </div>
 
@@ -847,7 +898,7 @@ const handleConnectToCompany = async (e: React.FormEvent) => {
 
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Phone className="w-4 h-4" />
-                    <span>{empresa.telefone}</span>
+                    <span>{formatTelefone(empresa.telefone)}</span>
                   </div>
 
                   <div className="flex items-center gap-2 text-sm text-gray-600">
