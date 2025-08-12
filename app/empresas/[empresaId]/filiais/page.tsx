@@ -121,16 +121,50 @@ export default function FiliaisPage() {
     })
   }, [filiais, searchTerm])
 
+  const formatCNPJ = (value: string): string => {
+    const cnpj = value.replace(/\D/g, "").substring(0, 14);
+
+    if (!cnpj.length) {
+      return "";
+    }
+    if (cnpj.length <= 2) {
+      return cnpj;
+    }
+    if (cnpj.length <= 5) {
+      return `${cnpj.slice(0, 2)}.${cnpj.slice(2)}`;
+    }
+    if (cnpj.length <= 8) {
+      return `${cnpj.slice(0, 2)}.${cnpj.slice(2, 5)}.${cnpj.slice(5)}`;
+    }
+    if (cnpj.length <= 12) {
+      return `${cnpj.slice(0, 2)}.${cnpj.slice(2, 5)}.${cnpj.slice(5, 8)}/${cnpj.slice(8)}`;
+    }
+    return `${cnpj.slice(0, 2)}.${cnpj.slice(2, 5)}.${cnpj.slice(5, 8)}/${cnpj.slice(8, 12)}-${cnpj.slice(12, 14)}`;
+  };
+
+  const formatTelefone = (value: string): string => {
+    const phone = value.replace(/\D/g, "").substring(0, 11);
+    if (!phone.length) {
+      return "";
+    }
+    if (phone.length <= 2) {
+      return `(${phone}`;
+    }
+    if (phone.length <= 6) {
+      return `(${phone.slice(0, 2)}) ${phone.slice(2)}`;
+    }
+    if (phone.length <= 10) {
+      return `(${phone.slice(0, 2)}) ${phone.slice(2, 6)}-${phone.slice(6)}`;
+    }
+    return `(${phone.slice(0, 2)}) ${phone.slice(2, 7)}-${phone.slice(7, 11)}`;
+  };
+
   const formatCEP = (value: string) => {
     const numbers = value.replace(/\D/g, "")
     if (numbers.length <= 8) {
       return numbers.replace(/(\d{5})(\d{3})/, "$1-$2")
     }
     return value
-  }
-
-  const formatCNPJ = (cnpj: string) => {
-    return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")
   }
 
   const getEnderecoCompleto = (endereco: Filial["endereco"]) => {
@@ -149,8 +183,13 @@ export default function FiliaisPage() {
 
 const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const payload = { ...formData };
+    if (payload.cnpj) {
+        payload.cnpj = payload.cnpj.replace(/\D/g, '');
+    }
+    if (payload.telefone) {
+        payload.telefone = payload.telefone.replace(/\D/g, '');
+    }
     if (payload.endereco?.cep) {
         payload.endereco.cep = payload.endereco.cep.replace(/\D/g, '');
     }
@@ -174,7 +213,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             setSuccess("Filial criada com sucesso!");
         }
 
-        resetForm(); // Primeiro, fecha o modal
+        resetForm(); 
 
         setTimeout(() => {
             fetchFiliais();
@@ -293,10 +332,14 @@ const handleDelete = async (id: number) => {
                       <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                       <Input
                         id="cnpj"
-                        value={formData.cnpj}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, cnpj: e.target.value }))}
+                        value={formData.cnpj || ''}
+                        onChange={(e) => {
+                          const formatted = formatCNPJ(e.target.value);
+                          setFormData((prev) => ({ ...prev, cnpj: formatted }));
+                        }}
                         className="pl-10"
                         placeholder="00.000.000/0000-00"
+                        maxLength={18}
                         required
                       />
                     </div>
@@ -323,9 +366,14 @@ const handleDelete = async (id: number) => {
                       <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                       <Input
                         id="telefone"
-                        value={formData.telefone}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, telefone: e.target.value }))}
+                        value={formData.telefone || ''}
+                        onChange={(e) => {
+                          const formatted = formatTelefone(e.target.value);
+                          setFormData((prev) => ({ ...prev, telefone: formatted }));
+                        }}
                         className="pl-10"
+                        placeholder="(99) 99999-9999"
+                        maxLength={15}
                         required
                       />
                     </div>
@@ -562,7 +610,7 @@ const handleDelete = async (id: number) => {
 
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Phone className="w-4 h-4" />
-                  <span>{filial.telefone}</span>
+                  <span>{formatTelefone(filial.telefone)}</span>
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-gray-600">
