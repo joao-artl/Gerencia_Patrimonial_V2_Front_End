@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Building, Search, Plus, Edit, Trash2, MapPin, Phone, Mail, Eye, Lock, EyeOff, CreditCard } from "lucide-react"
 import type { Filial } from "@/types"
 import { useParams, useRouter } from "next/navigation"
@@ -83,6 +84,17 @@ export default function FiliaisPage() {
       complemento: "",
     },
   })
+
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        setSuccess("");
+        setError("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error]);
+
 
   const fetchFiliais = useCallback(async () => {
       if (!empresaId) return; 
@@ -241,21 +253,22 @@ const handleSubmit = async (e: React.FormEvent) => {
     setIsDialogOpen(true)
   }
 
-const handleDelete = async (id: number) => { 
-    setLoading(true);
-    try {
-        await api.delete(`/empresas/${empresaId}/filiais/${id}/`);
-        
-        setTimeout(() => {
-            fetchFiliais();
-        }, 300);
+  const handleDelete = async (id: number) => {
+      setLoading(true);
+      setError("");
+      setSuccess("");
+      try {
+          await api.delete(`/empresas/${empresaId}/filiais/${id}/`);
+          setSuccess("Filial excluída com sucesso!");
+          fetchFiliais();
 
-    } catch (err) {
-        console.error("Erro ao excluir filial:", err);
-    } finally {
-        setLoading(false);
-    }
-};
+      } catch (err) {
+          setError("Falha ao excluir a filial. Tente novamente.");
+          console.error("Erro ao excluir filial:", err);
+      } finally {
+          setLoading(false);
+      }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -286,6 +299,22 @@ const handleDelete = async (id: number) => {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestão de Filiais</h1>
         <p className="text-gray-600">Gerencie todas as filiais da empresa</p>
       </div>
+
+      {/*Mensagens de feedback */}
+      {error && (
+        <div className="mb-6">
+            <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+            </Alert>
+        </div>
+      )}
+      {success && (
+        <div className="mb-6">
+            <Alert className="border-green-500 text-green-700 bg-green-50">
+                <AlertDescription>{success}</AlertDescription>
+            </Alert>
+        </div>
+      )}
 
       {/* Filtros e Busca */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
