@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +37,8 @@ export default function FuncionariosPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<Funcionario | null>(null)
   const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [formData, setFormData] = useState<Partial<Funcionario> & { senha_da_filial?: string }>({
     nome: "",
     cpf: "",
@@ -44,6 +47,15 @@ export default function FuncionariosPage() {
     filialId: "",
     senha_da_filial: "", 
   })
+  useEffect(() => {
+      if (success || error) {
+        const timer = setTimeout(() => {
+          setSuccess("");
+          setError("");
+        }, 5000); 
+        return () => clearTimeout(timer);
+      }
+  }, [success, error]);
 
 const fetchData = useCallback(async () => {
     if (!empresaId) return;
@@ -111,22 +123,15 @@ useEffect(() => {
 
   const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!validateCPF(formData.cpf || "")) { alert("CPF inválido."); return; }
-      if (!editingItem && (!formData.senha || formData.senha.length < 6)) {
-          alert("Na criação, a senha é obrigatória e deve ter pelo menos 6 caracteres.");
-          return;
-      }
-      if (editingItem && formData.senha && formData.senha.length < 6) {
-          alert("A nova senha deve ter pelo menos 6 caracteres.");
-          return;
-      }
-      if (!formData.filialId) { alert("Selecione uma filial."); return; }
-      if (!formData.senha_da_filial) {
-          alert("A senha da filial é obrigatória para salvar as alterações.");
-          return;
-      }
+      if (!validateCPF(formData.cpf || "")) { setError("CPF inválido. Digite um CPF válido com 11 dígitos."); return; }
+      if (!editingItem && (!formData.senha || formData.senha.length < 6)) { setError("A senha é obrigatória e deve ter no mínimo 6 caracteres."); return; }
+      if (editingItem && formData.senha && formData.senha.length < 6) { setError("A nova senha deve ter no mínimo 6 caracteres."); return; }
+      if (!formData.filialId) { setError("Por favor, selecione uma filial."); return; }
+      if (!formData.senha_da_filial) { setError("A senha da filial é obrigatória para confirmar a operação."); return; }
 
       setLoading(true);
+      setError("");
+      setSuccess("");
 
       try {
           const payload: any = {
@@ -135,30 +140,32 @@ useEffect(() => {
               filial_associada: formData.filialId,
               senha_da_filial: formData.senha_da_filial,
           };
-
           if (!editingItem) {
               payload.cpf = formData.cpf?.replace(/\D/g, '');
               payload.tipo_usuario = "FUNCIONARIO";
           }
-
           if (formData.senha) {
               payload.senha = formData.senha;
           }
 
+          let successMessage = "";
           if (editingItem) {
               await api.patch(`/usuarios/${editingItem.id}/`, payload);
+              successMessage = "Funcionário atualizado com sucesso!";
           } else {
               await api.post('/usuarios/', payload);
+              successMessage = "Funcionário cadastrado com sucesso!";
           }
 
+          await fetchData();
+          setSuccess(successMessage);
           resetForm();
-          setTimeout(fetchData, 300);
 
       } catch (err: any) {
           console.error("Erro ao salvar funcionário:", err.response?.data);
           const apiError = err.response?.data;
-          const errorMessage = apiError ? Object.values(apiError).flat().join(' ') : "Falha ao salvar. Tente novamente.";
-          alert(errorMessage);
+          const errorMessage = apiError ? Object.values(apiError).flat().join(' ') : "Falha ao salvar. Verifique os dados e tente novamente.";
+          setError(errorMessage);
       } finally {
           setLoading(false);
       }
@@ -179,10 +186,15 @@ const handleEdit = (item: Funcionario) => {
 
   const handleDelete = async (id: number) => { 
       setLoading(true);
+      setError("");
+      setSuccess("");
       try {
           await api.delete(`/usuarios/${id}/`);
-          setTimeout(fetchData, 300); 
+          
+          await fetchData();
+          setSuccess("Funcionário excluído com sucesso!");
       } catch (err) {
+          setError("Falha ao excluir o funcionário.");
           console.error("Erro ao excluir funcionário:", err);
       } finally {
           setLoading(false);
@@ -210,6 +222,18 @@ const handleEdit = (item: Funcionario) => {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestão de Funcionários</h1>
         <p className="text-gray-600">Gerencie todos os funcionários da empresa</p>
       </div>
+
+      {/*Mensagens de feedback */}
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      {success && (
+        <Alert className="mb-6 border-green-500 text-green-700 bg-green-50">
+          <AlertDescription>{success}</AlertDescription>
+        </Alert>
+      )}
 
       {/* Filtros e Busca */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
