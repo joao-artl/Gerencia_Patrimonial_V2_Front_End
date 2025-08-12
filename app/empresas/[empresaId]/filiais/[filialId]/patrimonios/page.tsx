@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import api from "@/lib/api";
 import {
   AlertDialog,
@@ -91,6 +92,17 @@ export default function PatrimoniosFilialPage() {
   const [filial, setFilial] = useState<{ nome: string } | null>(null);
   const [patrimonios, setPatrimonios] = useState<any[]>([]); 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        setSuccess("");
+        setError("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error]);
 
   const fetchPatrimonios = useCallback(async () => {
     if (!empresaId || !filialId) return;
@@ -238,14 +250,17 @@ const handleSubmit = async (e: React.FormEvent) => {
         const baseUrl = `/empresas/${empresaId}/filiais/${filialId}/${endpoint}/`;
         if (editingItem) {
             await api.patch(`${baseUrl}${editingItem.id}/`, payload);
+            setSuccess("Patrimônio atualizado com sucesso!"); 
         } else {
             await api.post(baseUrl, payload);
+            setSuccess("Patrimônio adicionado com sucesso!"); 
         }
 
         resetForm();
-        setTimeout(() => fetchPatrimonios(), 300); 
+        fetchPatrimonios(); 
 
     } catch (err: any) {
+        setError("Erro ao salvar o patrimônio. Verifique os dados e tente novamente.");
         console.error("Erro ao salvar patrimônio:", err.response?.data);
     } finally {
         setLoading(false);
@@ -269,13 +284,17 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   const handleDelete = async (item: Patrimonio) => {
       setLoading(true);
+      setError("");
+      setSuccess("");
       const { id, tipo } = item;
       const endpoint = `${tipo === 'imovel' ? 'imobiliario' : tipo}s`;
 
       try {
           await api.delete(`/empresas/${empresaId}/filiais/${filialId}/${endpoint}/${id}/`);
-          setTimeout(() => fetchPatrimonios(), 300); 
+          setSuccess("Patrimônio excluído com sucesso!");
+          fetchPatrimonios(); 
       } catch (err) {
+          setError("Falha ao excluir o patrimônio.");
           console.error("Erro ao excluir patrimônio:", err);
       } finally {
           setLoading(false);
@@ -427,6 +446,18 @@ const handleSubmit = async (e: React.FormEvent) => {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Patrimônio - {filial.nome}</h1>
         <p className="text-gray-600">Gerencie todos os bens patrimoniais desta filial</p>
       </div>
+
+      {/*Mensagens de feedback */}
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      {success && (
+        <Alert className="mb-6 border-green-500 text-green-700 bg-green-50">
+          <AlertDescription>{success}</AlertDescription>
+        </Alert>
+      )}
 
       {/* Filtros e Busca */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
