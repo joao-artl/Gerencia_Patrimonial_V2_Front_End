@@ -87,6 +87,15 @@ export default function DashboardPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [activeTab, setActiveTab] = useState("criar")
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        setSuccess("");
+        setError("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error]);
 
   const [formData, setFormData] = useState<Partial<Empresa>>({
     nome: "",
@@ -299,21 +308,18 @@ const handleConnectToCompany = async (e: React.FormEvent) => {
     setIsDialogOpen(false)
     setShowPassword(false)
     setError("")
-    setSuccess("")
   }
 
   const resetConnectForm = () => {
     setConnectData({ email: "", senha: "" })
     setIsConnectDialogOpen(false)
     setError("")
-    setSuccess("")
   }
 
   const resetAddGestorForm = () => {
     setAddGestorData({ empresaId: "", empresaSenha: "", gestorEmail: "" })
     setIsAddGestorDialogOpen(false)
     setError("")
-    setSuccess("")
   }
 
   const formatCNPJ = (cnpj: string) => {
@@ -378,24 +384,24 @@ const handleConnectToCompany = async (e: React.FormEvent) => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Mensagens de feedback */}
-        {error && (
-          <Alert className="mb-6 border-red-200 bg-red-50">
-            <AlertDescription className="text-red-800">{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {success && (
-          <Alert className="mb-6 border-green-200 bg-green-50">
-            <AlertDescription className="text-green-800">{success}</AlertDescription>
-          </Alert>
-        )}
-
         {/* Header da página */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Suas Empresas</h1>
           <p className="text-gray-600">Gerencie suas empresas, conecte-se a empresas existentes ou adicione gestores</p>
         </div>
+
+        {/* Mensagens de feedback (NOVA POSIÇÃO) */}
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {success && (
+          <Alert className="mb-6 border-green-500 text-green-700 bg-green-50">
+            <AlertDescription>{success}</AlertDescription>
+          </Alert>
+        )}
 
         {/* Filtros e Busca */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
