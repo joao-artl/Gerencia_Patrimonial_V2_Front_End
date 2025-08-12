@@ -230,34 +230,40 @@ const handleSubmit = async (e: React.FormEvent) => {
         endpoint = "imobiliarios";
         payload = {
             nome: formDataImovel.nome,
-            valor: formDataImovel.valor,
-            area: formDataImovel.area,
+            valor: parseFloat(formDataImovel.valor) || 0,
+            area: parseFloat(formDataImovel.area) || 0,
             tipo: formDataImovel.tipoImovel,
             endereco: formDataImovel.endereco,
         };
-        if (payload.endereco?.cep) {
-            payload.endereco.cep = payload.endereco.cep.replace(/\D/g, '');
-        }
     } else if (tipoSelecionado === "veiculo") {
         endpoint = "veiculos";
-        payload = { ...formDataVeiculo };
+        payload = { 
+            ...formDataVeiculo,
+            valor: parseFloat(formDataVeiculo.valor) || 0,
+            quantidade: parseInt(formDataVeiculo.quantidade, 10) || 0,
+        };
     } else {
         endpoint = "utilitarios";
-        payload = { ...formDataUtilitario };
+        payload = { 
+            ...formDataUtilitario,
+            valor: parseFloat(formDataUtilitario.valor) || 0,
+            quantidade: parseInt(formDataUtilitario.quantidade, 10) || 0,
+        };
     }
 
     try {
         const baseUrl = `/empresas/${empresaId}/filiais/${filialId}/${endpoint}/`;
+        let successMessage = "";
         if (editingItem) {
             await api.patch(`${baseUrl}${editingItem.id}/`, payload);
-            setSuccess("Patrimônio atualizado com sucesso!"); 
+            successMessage = "Patrimônio atualizado com sucesso!";
         } else {
             await api.post(baseUrl, payload);
-            setSuccess("Patrimônio adicionado com sucesso!"); 
+            successMessage = "Patrimônio adicionado com sucesso!";
         }
-
+        await fetchPatrimonios();
+        setSuccess(successMessage);
         resetForm();
-        fetchPatrimonios(); 
 
     } catch (err: any) {
         setError("Erro ao salvar o patrimônio. Verifique os dados e tente novamente.");
@@ -268,18 +274,17 @@ const handleSubmit = async (e: React.FormEvent) => {
 };
 
   const handleEdit = (item: Patrimonio) => {
-    setEditingItem(item)
-    setTipoSelecionado(item.tipo)
-
-    if (item.tipo === "imovel") {
-      setFormDataImovel(item as Imovel)
-    } else if (item.tipo === "veiculo") {
-      setFormDataVeiculo(item as Veiculo)
-    } else {
-      setFormDataUtilitario(item as Utilitario)
-    }
-
-    setIsDialogOpen(true)
+      const itemCopy = JSON.parse(JSON.stringify(item));
+      setEditingItem(itemCopy);
+      setTipoSelecionado(itemCopy.tipo);
+      if (itemCopy.tipo === "imovel") {
+        setFormDataImovel(itemCopy as Imovel);
+      } else if (itemCopy.tipo === "veiculo") {
+        setFormDataVeiculo(itemCopy as Veiculo);
+      } else {
+        setFormDataUtilitario(itemCopy as Utilitario);
+      }
+      setIsDialogOpen(true);
   }
 
   const handleDelete = async (item: Patrimonio) => {
@@ -291,8 +296,9 @@ const handleSubmit = async (e: React.FormEvent) => {
 
       try {
           await api.delete(`/empresas/${empresaId}/filiais/${filialId}/${endpoint}/${id}/`);
+          await fetchPatrimonios();
           setSuccess("Patrimônio excluído com sucesso!");
-          fetchPatrimonios(); 
+
       } catch (err) {
           setError("Falha ao excluir o patrimônio.");
           console.error("Erro ao excluir patrimônio:", err);
@@ -317,8 +323,8 @@ const handleSubmit = async (e: React.FormEvent) => {
   const resetForm = () => {
     setFormDataImovel({
       nome: "",
-      valor: 0,
-      area: 0,
+      valor: "", 
+      area: "", 
       tipoImovel: "",
       endereco: {
         cep: "",
@@ -332,16 +338,16 @@ const handleSubmit = async (e: React.FormEvent) => {
     })
     setFormDataVeiculo({
       nome: "",
-      valor: 0,
-      quantidade: 1,
+      valor: "", 
+      quantidade: "",
       cor: "",
       modelo: "",
       fabricante: "",
     })
     setFormDataUtilitario({
       nome: "",
-      valor: 0,
-      quantidade: 1,
+      valor: "", 
+      quantidade: "", 
       descricao: "",
       funcao: "",
     })
@@ -539,12 +545,14 @@ const handleSubmit = async (e: React.FormEvent) => {
                         <Label htmlFor="valor">Valor (R$) *</Label>
                         <Input
                           id="valor"
-                          type="number"
-                          step="0.01"
-                          value={formDataImovel.valor}
-                          onChange={(e) =>
-                            setFormDataImovel((prev) => ({ ...prev, valor: Number.parseFloat(e.target.value) || 0 }))
-                          }
+                          type="text" 
+                          inputMode="decimal" 
+                          value={formDataImovel.valor || ''}
+                          onChange={(e) => {
+                              const valorSanitizado = e.target.value.replace(/[^0-9.]/g, '');
+                              setFormDataImovel((prev) => ({ ...prev, valor: valorSanitizado }))
+                          }}
+                          placeholder="0.00"
                           required
                         />
                       </div>
@@ -553,12 +561,14 @@ const handleSubmit = async (e: React.FormEvent) => {
                         <Label htmlFor="area">Área (m²) *</Label>
                         <Input
                           id="area"
-                          type="number"
-                          step="0.01"
-                          value={formDataImovel.area}
-                          onChange={(e) =>
-                            setFormDataImovel((prev) => ({ ...prev, area: Number.parseFloat(e.target.value) || 0 }))
-                          }
+                          type="text"
+                          inputMode="decimal"
+                          value={formDataImovel.area || ''}
+                          onChange={(e) => {
+                            const valorSanitizado = e.target.value.replace(/[^0-9.]/g, '');
+                            setFormDataImovel((prev) => ({ ...prev, area: valorSanitizado }))
+                          }}
+                          placeholder="0.00"
                           required
                         />
                       </div>
@@ -725,12 +735,14 @@ const handleSubmit = async (e: React.FormEvent) => {
                         <Label htmlFor="valor">Valor (R$) *</Label>
                         <Input
                           id="valor"
-                          type="number"
-                          step="0.01"
-                          value={formDataVeiculo.valor}
-                          onChange={(e) =>
-                            setFormDataVeiculo((prev) => ({ ...prev, valor: Number.parseFloat(e.target.value) || 0 }))
-                          }
+                          type="text"
+                          inputMode="decimal"
+                          value={formDataVeiculo.valor || ''}
+                          onChange={(e) => {
+                            const valorSanitizado = e.target.value.replace(/[^0-9.]/g, '');
+                            setFormDataVeiculo((prev) => ({ ...prev, valor: valorSanitizado }))
+                          }}
+                          placeholder="0.00"
                           required
                         />
                       </div>
@@ -739,15 +751,14 @@ const handleSubmit = async (e: React.FormEvent) => {
                         <Label htmlFor="quantidade">Quantidade *</Label>
                         <Input
                           id="quantidade"
-                          type="number"
-                          min="1"
-                          value={formDataVeiculo.quantidade}
-                          onChange={(e) =>
-                            setFormDataVeiculo((prev) => ({
-                              ...prev,
-                              quantidade: Number.parseInt(e.target.value) || 1,
-                            }))
-                          }
+                          type="text"
+                          inputMode="numeric"
+                          value={formDataVeiculo.quantidade || ''}
+                          onChange={(e) => {
+                            const valorSanitizado = e.target.value.replace(/[^0-9]/g, '');
+                            setFormDataVeiculo((prev) => ({ ...prev, quantidade: valorSanitizado }))
+                          }}
+                          placeholder="0"
                           required
                         />
                       </div>
@@ -805,32 +816,30 @@ const handleSubmit = async (e: React.FormEvent) => {
                         <Label htmlFor="valor">Valor (R$) *</Label>
                         <Input
                           id="valor"
-                          type="number"
-                          step="0.01"
-                          value={formDataUtilitario.valor}
-                          onChange={(e) =>
-                            setFormDataUtilitario((prev) => ({
-                              ...prev,
-                              valor: Number.parseFloat(e.target.value) || 0,
-                            }))
-                          }
+                          type="text"
+                          inputMode="decimal"
+                          value={formDataUtilitario.valor || ''}
+                          onChange={(e) => {
+                            const valorSanitizado = e.target.value.replace(/[^0-9.]/g, '');
+                            setFormDataUtilitario((prev) => ({ ...prev, valor: valorSanitizado }))
+                          }}
+                          placeholder="0.00"
                           required
-                        />
+                        /> 
                       </div>
 
                       <div>
                         <Label htmlFor="quantidade">Quantidade *</Label>
                         <Input
                           id="quantidade"
-                          type="number"
-                          min="1"
-                          value={formDataUtilitario.quantidade}
-                          onChange={(e) =>
-                            setFormDataUtilitario((prev) => ({
-                              ...prev,
-                              quantidade: Number.parseInt(e.target.value) || 1,
-                            }))
-                          }
+                          type="text"
+                          inputMode="numeric"
+                          value={formDataUtilitario.quantidade || ''}
+                          onChange={(e) => {
+                            const valorSanitizado = e.target.value.replace(/[^0-9]/g, ''); 
+                            setFormDataUtilitario((prev) => ({ ...prev, quantidade: valorSanitizado }))
+                          }}
+                          placeholder="0"
                           required
                         />
                       </div>
@@ -941,7 +950,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       {/* Lista de Patrimônio */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {patrimoniosFiltrados.map((item) => (
-          <Card key={item.id} className="hover:shadow-lg transition-shadow">
+          <Card key={`${item.tipo}-${item.id}`} className="hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
