@@ -38,6 +38,7 @@ import {
   Lock,
   EyeOff,
   LinkIcon,
+  Settings, 
   UserPlus,
 } from "lucide-react"
 import type { Empresa, Usuario } from "@/types"
@@ -408,7 +409,7 @@ const handleConnectToCompany = async (e: React.FormEvent) => {
             </div>
 
             {/* Informações do usuário */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <User className="w-4 h-4" />
                 <div className="text-right">
@@ -416,6 +417,16 @@ const handleConnectToCompany = async (e: React.FormEvent) => {
                   <p className="text-xs text-gray-500">{usuario.email}</p>
                 </div>
               </div>
+
+              {/* Botão para configurações da conta do usuário*/}
+              <Link href="/configuracoes" legacyBehavior>
+                <a title="Configurações da Conta">
+                  <Button variant="outline" size="icon">
+                    <Settings className="w-4 h-4" />
+                  </Button>
+                </a>
+              </Link>
+              
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
                 Sair
