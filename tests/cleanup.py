@@ -57,7 +57,12 @@ def cleanup():
                 print(f"✅ Empresa ID {empresa_id_a_deletar} deletada com sucesso.")
 
         print(f"Deletando o usuário gestor '{gestor_email}' (ID: {user_id})...")
-        delete_user_response = requests.delete(f"{API_URL}/usuarios/{user_id}/", headers=headers)
+        delete_payload = {"senha": gestor_senha}
+        delete_user_response = requests.delete(
+            f"{API_URL}/usuarios/{user_id}/",
+            headers=headers,
+            json=delete_payload
+        )
         delete_user_response.raise_for_status()
         print(f"✅ Usuário gestor ID {user_id} deletado com sucesso.")
 
