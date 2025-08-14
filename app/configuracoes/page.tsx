@@ -6,10 +6,21 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { ArrowLeft, User, Mail, Lock, Eye, EyeOff, Save, Building2, CreditCard } from "lucide-react"
 import Link from "next/link"
 import type { Usuario } from "@/types"
@@ -32,6 +43,7 @@ export default function ConfiguracoesPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [loading, setLoading] = useState(false)
+  const [senhaConfirmacao, setSenhaConfirmacao] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -142,6 +154,39 @@ export default function ConfiguracoesPage() {
     }
   };
   
+  const handleDeleteAccount = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    if (!senhaConfirmacao) {
+      setError("Por favor, digite sua senha para confirmar a exclusão.");
+      setLoading(false);
+      return;
+    }
+    if (!usuario) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      await api.delete(`/usuarios/${usuario.id}/`, {
+        data: { senha: senhaConfirmacao },
+      });
+
+      alert("Sua conta foi excluída com sucesso.");
+      localStorage.clear();
+      router.push("/");
+
+    } catch (err: any) {
+      const apiError = err.response?.data?.error || "A senha informada está incorreta.";
+      setError(apiError);
+      setLoading(false);
+      setSenhaConfirmacao("");
+    }
+  };
+
   if (!usuario) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -187,9 +232,8 @@ export default function ConfiguracoesPage() {
         {error && <Alert variant="destructive" className="mb-6"><AlertDescription>{error}</AlertDescription></Alert>}
         {success && <Alert className="mb-6 border-green-500 text-green-700 bg-green-50"><AlertDescription>{success}</AlertDescription></Alert>}
 
-
         <div className="grid gap-8">
-          {/* Card de Informações Pessoais */}
+          {/* Card de Informações e Credenciais */}
           <Card>
             <form onSubmit={handleSubmit}>
               <CardHeader>
@@ -269,6 +313,68 @@ export default function ConfiguracoesPage() {
                 </Button>
               </CardFooter>
             </form>
+          </Card>
+          
+          {/* Zona de Perigo com o botão para excluir a conta */}
+          <Card className="border-destructive/50">
+            <CardHeader>
+              <CardTitle className="text-destructive">Zona de Perigo</CardTitle>
+              <CardDescription>Ações permanentes e irreversíveis.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
+                <div>
+                  <h3 className="font-semibold">Excluir sua conta</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Todos os seus dados serão permanentemente removidos.
+                  </p>
+                </div>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="mt-2 sm:mt-0">Excluir Conta</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Você tem certeza absoluta?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta ação é <strong>irreversível</strong> e sua conta de usuário será permanentemente
+                        excluída.
+                        <br/><br/>
+                        <strong className="text-destructive">ATENÇÃO:</strong> Se você for o 
+                        <strong> único gestor</strong> de qualquer uma de suas empresas, a empresa e 
+                        <strong> todos os seus dados</strong> (filiais, funcionários, patrimônios) 
+                        também serão excluídos.
+                        <div className="mt-4">
+                          <Label htmlFor="senha-confirmacao" className="font-semibold">
+                            Para confirmar, digite sua senha atual:
+                          </Label>
+                          <Input
+                            id="senha-confirmacao"
+                            type="password"
+                            value={senhaConfirmacao}
+                            onChange={(e) => setSenhaConfirmacao(e.target.value)}
+                            placeholder="Sua senha"
+                            className="mt-2"
+                          />
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => setSenhaConfirmacao("")}>
+                        Cancelar
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDeleteAccount}
+                        className="bg-destructive hover:bg-destructive/90"
+                        disabled={loading || !senhaConfirmacao}
+                      >
+                        {loading ? "Excluindo..." : "Entendi, excluir minha conta"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </CardContent>
           </Card>
         </div>
       </div>
