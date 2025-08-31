@@ -1,22 +1,58 @@
 # Gerência Patrimonial V2 Frontend
 
+## 📖 Sobre o Projeto
+
 Este é o repositório do frontend da aplicação **Gerência Patrimonial V2**, uma interface de usuário moderna e responsiva para o sistema de gestão de patrimônio empresarial. A aplicação foi construída com Next.js e TypeScript, utilizando o App Router para uma navegação rápida e otimizada.
 
-[Link para a aplicação](https://gerencia-patrimonial.vercel.app/)
+### 🔗 Links Úteis
 
-[Link para documentação da API](https://gerencia-patrimonial-api.onrender.com/api/schema/swagger-ui/)
+| Recurso | Link |
+| :--- | :--- |
+| **Aplicação** | [gerencia-patrimonial.vercel.app](https://gerencia-patrimonial.vercel.app/) |
+| **Documentação da API** | [gerencia-patrimonial-api.onrender.com](https://gerencia-patrimonial-api.onrender.com/api/schema/swagger-ui/) |
+| **Documentação (Artefatos)** | [joao-artl.github.io/Gerencia_Patrimonial_V2/](https://joao-artl.github.io/Gerencia_Patrimonial_V2/) |
+| **Repositório (Back-End)** | [github.com/joao-artl/Gerencia_Patrimonial_V2](https://github.com/joao-artl/Gerencia_Patrimonial_V2) |
 
-[Link para documentação dos artefatos](https://joao-artl.github.io/Gerencia_Patrimonial_V2/)
+## ✨ Funcionalidades Principais
 
-[Link para o repositório do Back-End](https://github.com/joao-artl/Gerencia_Patrimonial_V2)
-
-## ✨ Funcionalidades da Interface
-
-* **Fluxo de Autenticação Completo:** Telas de Login e Cadastro que se comunicam com a API para autenticação via JWT.
-* **Dashboard do Gestor:** Visão geral da empresa, com acesso ao gerenciamento de filiais e funcionários.
-* **Interfaces de CRUD:** Modais e formulários para criar, editar e deletar Empresas, Filiais e Patrimônios.
-* **Busca e Filtros Dinâmicos:** Todos os dados são carregados da API e podem ser filtrados e pesquisados em tempo real.
-* **Design Responsivo:** A interface se adapta a diferentes tamanhos de tela, de desktops a dispositivos móveis.
+<table>
+  <tr>
+    <td align="center">
+      <strong>Dashboards Dinâmicos</strong><br>
+      <img src="./assets/dashboardEmpresa.png" width="400">
+      <p>Visões gerais para gestores com dados consolidados de toda a empresa.</p>
+    </td>
+    <td align="center">
+      <strong>Autenticação Segura</strong><br>
+      <img src="./assets/telaLogin.png" width="400">
+      <p>Sistema de login e cadastro com tokens JWT (Access & Refresh Tokens).</p>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <strong>Gerenciamento de Entidades</strong><br>
+      <img src="./assets/telaCadastroEmpresa.png" width="400">
+      <p>CRUD completo para Empresas, Filiais e Funcionários.</p>
+    </td>
+    <td align="center">
+      <strong>Gestão de Patrimônio</strong><br>
+      <img src="./assets/telaCadastroImobiliario.png" width="400">
+      <p>Cadastro e gerenciamento de múltiplos tipos de patrimônios.</p>
+    </td>
+  </tr>
+    <tr>
+    <td align="center">
+      <strong>Busca e Filtros</strong><br>
+      <img src="./assets/telaBuscaGlobal.png" width="400">
+      <p>Funcionalidades de busca e filtro em todas as listagens.</p>
+    </td>
+    <td align="center">
+      <strong>Design Responsivo</strong><br>
+      <img src="./assets/telaResponsiva.png" width="400">
+      <p>A interface se adapta a diferentes tamanhos de tela, de desktops a dispositivos móveis.</p>
+    </td>
+  </tr>
+</table>
 
 ## 🛠️ Tecnologias Utilizadas
 
