@@ -87,7 +87,7 @@ Este é o repositório do frontend da aplicação **Gerência Patrimonial V2**, 
 
 4.  **Inicie o servidor de desenvolvimento:**
     ```bash
-    docker-compose up --build
+    docker compose up --build
     ```
     A aplicação estará disponível em `http://localhost:3000`.
 
