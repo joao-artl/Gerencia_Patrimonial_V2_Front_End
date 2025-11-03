@@ -69,7 +69,6 @@ Este é o repositório do frontend da aplicação **Gerência Patrimonial V2**, 
 1.  **Pré-requisitos:**
     * A **API do backend** deve estar rodando (localmente via Docker ou no deploy do Render).
     * [Node.js](https://nodejs.org/)
-    * [pnpm](https://pnpm.io/installation)
     * [Docker](https://www.docker.com/products/docker-desktop/)
     * [Docker Compose](https://docs.docker.com/compose/install/)
 
@@ -79,25 +78,20 @@ Este é o repositório do frontend da aplicação **Gerência Patrimonial V2**, 
     cd Gerencia_Patrimonial_V2_Front_End/
     ```
 
-3.  **Instale as dependências:**
-    ```bash
-    pnpm install
-    ```
-
-4.  **Crie o arquivo de ambiente:**
-    * Crie um arquivo `.env.local` na raiz do projeto.
+3.  **Crie o arquivo de ambiente:**
+    * Crie um arquivo `.env` na raiz do projeto.
     * Adicione a variável de ambiente apontando para a sua API:
         ```
         NEXT_PUBLIC_API_URL=http://localhost:8000/api
         ```
 
-5.  **Inicie o servidor de desenvolvimento:**
+4.  **Inicie o servidor de desenvolvimento:**
     ```bash
     docker-compose up --build
     ```
     A aplicação estará disponível em `http://localhost:3000`.
 
-6.  **Para parar os containers:**
+5.  **Para parar os containers:**
     ```bash
     docker compose down -v
     ```
